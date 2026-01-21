@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
+from app.modules.radarr import router as radarr_router
+from app.modules.sonarr import router as sonarr_router
 
 
 @asynccontextmanager
@@ -31,6 +33,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Include routers
+app.include_router(radarr_router)
+app.include_router(sonarr_router)
 
 
 @app.get("/health")
