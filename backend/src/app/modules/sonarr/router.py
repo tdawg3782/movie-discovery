@@ -39,7 +39,7 @@ async def add_series(
     try:
         result = await client.add_series(
             tmdb_id=data.tmdb_id,
-            quality_profile_id=data.quality_profile_id or 1,
+            quality_profile_id=data.quality_profile_id,
         )
         return AddMediaResponse(
             success=True,

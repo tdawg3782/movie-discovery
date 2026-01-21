@@ -1,5 +1,7 @@
 """Application configuration via environment variables."""
-from pydantic_settings import BaseSettings
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -20,8 +22,12 @@ class Settings(BaseSettings):
     # Database
     database_path: str = "./data/movie_discovery.db"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        # Look for .env in project root (parent of backend/)
+        # Path: config.py → app → src → backend → movie_discovery (4 parents)
+        env_file=Path(__file__).resolve().parent.parent.parent.parent / ".env",
+        env_file_encoding="utf-8",
+    )
 
 
 settings = Settings()

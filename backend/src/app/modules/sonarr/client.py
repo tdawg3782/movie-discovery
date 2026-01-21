@@ -44,14 +44,24 @@ class SonarrClient:
         results = await self._get("/series/lookup", {"term": f"tmdb:{tmdb_id}"})
         return results[0] if results else None
 
+    async def get_quality_profiles(self) -> list:
+        """Get available quality profiles."""
+        return await self._get("/qualityprofile")
+
     async def add_series(
         self,
         tmdb_id: int,
-        quality_profile_id: int = 1,
+        quality_profile_id: int | None = None,
         root_folder_path: str | None = None,
     ) -> dict:
         """Add series to Sonarr."""
+        # Check if already in library
         series = await self.lookup_series(tmdb_id)
+        if series and series.get("tvdbId"):
+            existing = await self.get_series_by_tvdb_id(series["tvdbId"])
+            if existing:
+                raise ValueError(f"Series already in Sonarr library: {existing.get('title', tmdb_id)}")
+
         if not series:
             raise ValueError(f"Series not found: {tmdb_id}")
 
@@ -60,6 +70,13 @@ class SonarrClient:
             if not folders:
                 raise ValueError("No root folders configured in Sonarr")
             root_folder_path = folders[0]["path"]
+
+        # Get quality profile if not specified
+        if not quality_profile_id:
+            profiles = await self.get_quality_profiles()
+            if not profiles:
+                raise ValueError("No quality profiles configured in Sonarr")
+            quality_profile_id = profiles[0]["id"]
 
         series["qualityProfileId"] = quality_profile_id
         series["rootFolderPath"] = root_folder_path

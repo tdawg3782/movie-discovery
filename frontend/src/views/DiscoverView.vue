@@ -1,6 +1,16 @@
 <template>
   <div class="discover-view">
-    <div class="tabs">
+    <div class="search-bar">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search movies and TV shows..."
+        @keyup.enter="performSearch"
+      />
+      <button v-if="searchQuery" class="clear-btn" @click="clearSearch">×</button>
+    </div>
+
+    <div v-if="!isSearching" class="tabs">
       <button
         :class="{ active: activeTab === 'movies' }"
         @click="activeTab = 'movies'"
@@ -15,7 +25,11 @@
       </button>
     </div>
 
-    <div v-if="loading" class="loading">Loading trending {{ activeTab }}...</div>
+    <div v-if="isSearching" class="search-header">
+      <span>Search results for "{{ searchQuery }}"</span>
+    </div>
+
+    <div v-if="loading" class="loading">{{ isSearching ? 'Searching...' : `Loading trending ${activeTab}...` }}</div>
 
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
@@ -29,10 +43,14 @@
     <div v-else class="media-grid">
       <MediaCard
         v-for="item in items"
-        :key="item.id"
+        :key="`${item.tmdb_id}-${item.media_type}`"
         :media="item"
         @add="handleAdd"
       />
+    </div>
+
+    <div v-if="!loading && items.length > 0 && currentPage < totalPages" class="load-more">
+      <button @click="loadNextPage">Load More</button>
     </div>
   </div>
 </template>
@@ -47,17 +65,24 @@ const activeTab = ref('movies')
 const items = ref([])
 const loading = ref(false)
 const error = ref(null)
+const searchQuery = ref('')
+const isSearching = ref(false)
+const currentPage = ref(1)
+const totalPages = ref(1)
 
 const fetchTrending = async () => {
   loading.value = true
   error.value = null
+  isSearching.value = false
+  currentPage.value = 1
 
   try {
     const response = activeTab.value === 'movies'
       ? await discoverService.getTrendingMovies()
       : await discoverService.getTrendingShows()
 
-    items.value = response.data.results || response.data || []
+    items.value = response.results || []
+    totalPages.value = response.total_pages || 1
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load trending content'
     items.value = []
@@ -66,15 +91,76 @@ const fetchTrending = async () => {
   }
 }
 
+const performSearch = async (page = 1, append = false) => {
+  if (!searchQuery.value.trim()) {
+    clearSearch()
+    return
+  }
+
+  loading.value = true
+  error.value = null
+  isSearching.value = true
+  currentPage.value = page
+
+  try {
+    const response = await discoverService.search(searchQuery.value, page)
+    const newResults = response.results || []
+    items.value = append ? [...items.value, ...newResults] : newResults
+    totalPages.value = response.total_pages || 1
+  } catch (err) {
+    error.value = err.response?.data?.detail || 'Search failed'
+    if (!append) items.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+  isSearching.value = false
+  currentPage.value = 1
+  fetchTrending()
+}
+
+const loadNextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    if (isSearching.value) {
+      performSearch(currentPage.value + 1, true)
+    } else {
+      fetchTrendingPage(currentPage.value + 1)
+    }
+  }
+}
+
+const fetchTrendingPage = async (page) => {
+  loading.value = true
+  currentPage.value = page
+
+  try {
+    const response = activeTab.value === 'movies'
+      ? await discoverService.getTrendingMovies(page)
+      : await discoverService.getTrendingShows(page)
+
+    items.value = [...items.value, ...(response.results || [])]
+    totalPages.value = response.total_pages || 1
+  } catch (err) {
+    error.value = 'Failed to load more content'
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleAdd = async (media) => {
   try {
-    if (activeTab.value === 'movies') {
-      await libraryService.addMovie(media.id)
+    // Use media_type from the item (for search results which mix movies and shows)
+    const mediaType = media.media_type || (activeTab.value === 'movies' ? 'movie' : 'show')
+    if (mediaType === 'movie') {
+      await libraryService.addMovie(media.tmdb_id)
     } else {
-      await libraryService.addShow(media.id)
+      await libraryService.addShow(media.tmdb_id)
     }
     // Update local state to reflect the change
-    const index = items.value.findIndex(item => item.id === media.id)
+    const index = items.value.findIndex(item => item.tmdb_id === media.tmdb_id && item.media_type === media.media_type)
     if (index !== -1) {
       items.value[index] = { ...items.value[index], library_status: 'added' }
     }
@@ -154,5 +240,74 @@ onMounted(() => {
 
 .error button:hover {
   background: #f40d17;
+}
+
+.search-bar {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 14px 40px 14px 16px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+  border-color: #e50914;
+}
+
+.search-bar input::placeholder {
+  color: #666;
+}
+
+.search-bar .clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.search-bar .clear-btn:hover {
+  color: #e50914;
+}
+
+.search-header {
+  margin-bottom: 20px;
+  color: #888;
+  font-size: 14px;
+}
+
+.load-more {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.load-more button {
+  padding: 12px 40px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-more button:hover {
+  background: #3a3a3a;
+  border-color: #e50914;
 }
 </style>

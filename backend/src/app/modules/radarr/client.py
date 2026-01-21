@@ -44,13 +44,22 @@ class RadarrClient:
         results = await self._get("/movie/lookup", {"term": f"tmdb:{tmdb_id}"})
         return results[0] if results else None
 
+    async def get_quality_profiles(self) -> list:
+        """Get available quality profiles."""
+        return await self._get("/qualityprofile")
+
     async def add_movie(
         self,
         tmdb_id: int,
-        quality_profile_id: int = 1,
+        quality_profile_id: int | None = None,
         root_folder_path: str | None = None,
     ) -> dict:
         """Add movie to Radarr."""
+        # Check if already in library
+        existing = await self.get_movie_by_tmdb_id(tmdb_id)
+        if existing:
+            raise ValueError(f"Movie already in Radarr library: {existing.get('title', tmdb_id)}")
+
         movie = await self.lookup_movie(tmdb_id)
         if not movie:
             raise ValueError(f"Movie not found: {tmdb_id}")
@@ -61,6 +70,13 @@ class RadarrClient:
             if not folders:
                 raise ValueError("No root folders configured in Radarr")
             root_folder_path = folders[0]["path"]
+
+        # Get quality profile if not specified
+        if not quality_profile_id:
+            profiles = await self.get_quality_profiles()
+            if not profiles:
+                raise ValueError("No quality profiles configured in Radarr")
+            quality_profile_id = profiles[0]["id"]
 
         movie["qualityProfileId"] = quality_profile_id
         movie["rootFolderPath"] = root_folder_path
