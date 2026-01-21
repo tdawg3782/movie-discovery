@@ -3,18 +3,18 @@
     <header>
       <h1>Movie Discovery</h1>
       <nav>
-        <a href="#discover">Discover</a>
-        <a href="#watchlist">Watchlist</a>
+        <router-link to="/">Discover</router-link>
+        <router-link to="/watchlist">Watchlist</router-link>
       </nav>
     </header>
     <main>
-      <p>App shell ready. Modules coming soon.</p>
+      <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
-// App shell - routing and components added in frontend worktree
+// App shell with Vue Router
 </script>
 
 <style>
@@ -51,9 +51,14 @@ nav a {
   color: #e0e0e0;
   text-decoration: none;
   margin-left: 20px;
+  transition: color 0.2s;
 }
 
 nav a:hover {
+  color: #e50914;
+}
+
+nav a.router-link-active {
   color: #e50914;
 }
 </style>
