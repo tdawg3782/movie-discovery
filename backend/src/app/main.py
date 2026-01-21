@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.modules.discovery import router as discovery_router
+from app.modules.watchlist import router as watchlist_router
 
 
 @asynccontextmanager
@@ -35,6 +36,7 @@ app.add_middleware(
 
 
 app.include_router(discovery_router)
+app.include_router(watchlist_router)
 
 
 @app.get("/health")
