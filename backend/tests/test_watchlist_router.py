@@ -49,7 +49,7 @@ def test_add_to_watchlist(client):
         "/api/watchlist",
         json={"tmdb_id": 123, "media_type": "movie", "notes": "Want to watch"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["tmdb_id"] == 123
 
@@ -75,3 +75,9 @@ def test_delete_from_watchlist(client):
 
     get_response = client.get("/api/watchlist")
     assert get_response.json()["total"] == 0
+
+
+def test_delete_nonexistent_returns_404(client):
+    """Verify DELETE returns 404 for non-existent items."""
+    response = client.delete("/api/watchlist/99999")
+    assert response.status_code == 404

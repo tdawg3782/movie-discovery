@@ -33,7 +33,7 @@ async def get_watchlist(service: WatchlistService = Depends(get_service)):
     )
 
 
-@router.post("", response_model=WatchlistItem)
+@router.post("", response_model=WatchlistItem, status_code=201)
 async def add_to_watchlist(
     data: WatchlistAdd, service: WatchlistService = Depends(get_service)
 ):
