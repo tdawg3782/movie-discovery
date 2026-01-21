@@ -11,8 +11,8 @@ taskkill /f /fi "WINDOWTITLE eq Movie Discovery - Backend*" 2>nul
 echo Stopping Frontend...
 taskkill /f /fi "WINDOWTITLE eq Movie Discovery - Frontend*" 2>nul
 
-:: Kill any remaining node processes on port 5173
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5173" ^| findstr "LISTENING"') do (
+:: Kill any remaining node processes on port 3000
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do (
     taskkill /f /pid %%a 2>nul
 )
 
