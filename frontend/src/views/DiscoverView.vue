@@ -22,6 +22,10 @@
       <button @click="fetchTrending">Retry</button>
     </div>
 
+    <div v-else-if="items.length === 0" class="empty">
+      No trending {{ activeTab }} found.
+    </div>
+
     <div v-else class="media-grid">
       <MediaCard
         v-for="item in items"
@@ -29,10 +33,6 @@
         :media="item"
         @add="handleAdd"
       />
-    </div>
-
-    <div v-if="!loading && !error && items.length === 0" class="empty">
-      No trending {{ activeTab }} found.
     </div>
   </div>
 </template>
