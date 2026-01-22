@@ -5,7 +5,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="Search movies and TV shows..."
-        @keyup.enter="performSearch"
+        @keyup.enter="performSearch()"
       />
       <button v-if="searchQuery" class="clear-btn" @click="clearSearch">×</button>
     </div>
