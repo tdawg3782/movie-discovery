@@ -93,3 +93,28 @@ class RadarrClient:
         if movie.get("hasFile"):
             return "available"
         return "added"
+
+    async def get_all_movies(self) -> list[dict]:
+        """Get all movies in library."""
+        return await self._get("/movie")
+
+    async def get_batch_status(self, tmdb_ids: list[int]) -> dict[int, str]:
+        """Get status for multiple movies efficiently.
+
+        Returns dict mapping tmdb_id -> status ('available', 'added', or None)
+        """
+        # Fetch all movies once
+        all_movies = await self.get_all_movies()
+
+        # Build lookup by tmdb_id
+        library_map = {}
+        for movie in all_movies:
+            tmdb_id = movie.get("tmdbId")
+            if tmdb_id:
+                if movie.get("hasFile"):
+                    library_map[tmdb_id] = "available"
+                else:
+                    library_map[tmdb_id] = "added"
+
+        # Return status for requested IDs
+        return {tmdb_id: library_map.get(tmdb_id) for tmdb_id in tmdb_ids}

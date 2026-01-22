@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from httpx import HTTPStatusError, TimeoutException
 
 from app.config import settings
-from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse
+from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse, BatchStatusRequest, BatchStatusResponse
 from .client import RadarrClient
 
 
@@ -48,6 +48,22 @@ async def add_movie(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except TimeoutException:
+        raise HTTPException(status_code=504, detail="Radarr request timed out")
+    except HTTPStatusError as e:
+        raise HTTPException(
+            status_code=503, detail=f"Radarr API error: {e.response.status_code}"
+        )
+
+
+@router.post("/status/batch", response_model=BatchStatusResponse)
+async def get_batch_status(
+    data: BatchStatusRequest, client: RadarrClient = Depends(get_radarr_client)
+):
+    """Get library status for multiple movies at once."""
+    try:
+        statuses = await client.get_batch_status(data.tmdb_ids)
+        return BatchStatusResponse(statuses=statuses)
     except TimeoutException:
         raise HTTPException(status_code=504, detail="Radarr request timed out")
     except HTTPStatusError as e:

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from httpx import HTTPStatusError, TimeoutException
 
 from app.config import settings
-from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse
+from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse, BatchStatusRequest, BatchStatusResponse
 from .client import SonarrClient
 
 
@@ -48,6 +48,22 @@ async def add_series(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except TimeoutException:
+        raise HTTPException(status_code=504, detail="Sonarr request timed out")
+    except HTTPStatusError as e:
+        raise HTTPException(
+            status_code=503, detail=f"Sonarr API error: {e.response.status_code}"
+        )
+
+
+@router.post("/status/batch", response_model=BatchStatusResponse)
+async def get_batch_status(
+    data: BatchStatusRequest, client: SonarrClient = Depends(get_sonarr_client)
+):
+    """Get library status for multiple series at once."""
+    try:
+        statuses = await client.get_batch_status(data.tmdb_ids)
+        return BatchStatusResponse(statuses=statuses)
     except TimeoutException:
         raise HTTPException(status_code=504, detail="Sonarr request timed out")
     except HTTPStatusError as e:

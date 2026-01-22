@@ -1,5 +1,5 @@
 <template>
-  <span :class="['badge', status]">
+  <span :class="['badge', badgeClass]">
     {{ label }}
   </span>
 </template>
@@ -8,16 +8,28 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  status: { type: String, default: null }
+  status: { type: String, default: null },
+  mediaType: { type: String, default: 'movie' }
 })
+
+const isInLibrary = computed(() => props.status === 'available' || props.status === 'added')
+
+const serviceName = computed(() => props.mediaType === 'movie' ? 'Radarr' : 'Sonarr')
 
 const label = computed(() => {
   switch (props.status) {
-    case 'available': return 'In Library'
+    case 'available': return serviceName.value
     case 'downloading': return 'Downloading'
-    case 'added': return 'Added'
+    case 'added': return serviceName.value
     default: return 'Add'
   }
+})
+
+const badgeClass = computed(() => {
+  if (props.status === 'available') return 'in-library'
+  if (props.status === 'added') return 'added'
+  if (props.status === 'downloading') return 'downloading'
+  return 'add'
 })
 </script>
 
@@ -28,10 +40,19 @@ const label = computed(() => {
   font-size: 12px;
   font-weight: 600;
 }
-.available { background: #22c55e; color: white; }
-.downloading { background: #eab308; color: black; }
-.added { background: #3b82f6; color: white; }
-.badge:not(.available):not(.downloading):not(.added) {
+.in-library {
+  background: #22c55e;
+  color: white;
+}
+.downloading {
+  background: #eab308;
+  color: black;
+}
+.added {
+  background: #3b82f6;
+  color: white;
+}
+.add {
   background: #e50914;
   color: white;
   cursor: pointer;

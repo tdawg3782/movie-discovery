@@ -70,6 +70,32 @@ const isSearching = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
 
+const fetchLibraryStatuses = async (mediaItems) => {
+  if (!mediaItems.length) return
+
+  try {
+    // Separate movies and shows
+    const movieIds = mediaItems.filter(m => m.media_type === 'movie').map(m => m.tmdb_id)
+    const showIds = mediaItems.filter(m => m.media_type === 'show').map(m => m.tmdb_id)
+
+    // Fetch statuses in parallel
+    const [movieStatuses, showStatuses] = await Promise.all([
+      movieIds.length ? libraryService.getBatchMovieStatus(movieIds) : Promise.resolve({ statuses: {} }),
+      showIds.length ? libraryService.getBatchShowStatus(showIds) : Promise.resolve({ statuses: {} }),
+    ])
+
+    // Merge statuses into items
+    items.value = items.value.map(item => {
+      const statuses = item.media_type === 'movie' ? movieStatuses.statuses : showStatuses.statuses
+      const status = statuses[item.tmdb_id]
+      return status ? { ...item, library_status: status } : item
+    })
+  } catch (err) {
+    // Don't fail the whole view if status check fails
+    console.warn('Failed to fetch library statuses:', err)
+  }
+}
+
 const fetchTrending = async () => {
   loading.value = true
   error.value = null
@@ -83,6 +109,9 @@ const fetchTrending = async () => {
 
     items.value = response.results || []
     totalPages.value = response.total_pages || 1
+
+    // Fetch library statuses for the loaded items
+    await fetchLibraryStatuses(items.value)
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load trending content'
     items.value = []
@@ -107,6 +136,9 @@ const performSearch = async (page = 1, append = false) => {
     const newResults = response.results || []
     items.value = append ? [...items.value, ...newResults] : newResults
     totalPages.value = response.total_pages || 1
+
+    // Fetch library statuses for search results
+    await fetchLibraryStatuses(append ? newResults : items.value)
   } catch (err) {
     error.value = err.response?.data?.detail || 'Search failed'
     if (!append) items.value = []
@@ -141,8 +173,12 @@ const fetchTrendingPage = async (page) => {
       ? await discoverService.getTrendingMovies(page)
       : await discoverService.getTrendingShows(page)
 
-    items.value = [...items.value, ...(response.results || [])]
+    const newResults = response.results || []
+    items.value = [...items.value, ...newResults]
     totalPages.value = response.total_pages || 1
+
+    // Fetch library statuses for new items
+    await fetchLibraryStatuses(newResults)
   } catch (err) {
     error.value = 'Failed to load more content'
   } finally {

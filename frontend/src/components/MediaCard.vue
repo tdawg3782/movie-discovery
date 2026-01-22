@@ -9,6 +9,7 @@
       <div v-else class="no-poster">No Image</div>
       <StatusBadge
         :status="media.library_status"
+        :media-type="media.media_type"
         class="status-overlay"
         @click="handleAdd"
       />

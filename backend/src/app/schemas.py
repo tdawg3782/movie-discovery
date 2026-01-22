@@ -81,3 +81,15 @@ class AddMediaResponse(BaseModel):
     success: bool
     message: str
     tmdb_id: int
+
+
+class BatchStatusRequest(BaseModel):
+    """Request for batch status check."""
+
+    tmdb_ids: list[int]
+
+
+class BatchStatusResponse(BaseModel):
+    """Response with statuses for multiple items."""
+
+    statuses: dict[int, str | None]  # tmdb_id -> status or None if not in library

@@ -99,3 +99,47 @@ class SonarrClient:
         if stats.get("percentOfEpisodes", 0) == 100:
             return "available"
         return "added"
+
+    async def get_all_series(self) -> list[dict]:
+        """Get all series in library."""
+        return await self._get("/series")
+
+    async def get_batch_status(self, tmdb_ids: list[int]) -> dict[int, str | None]:
+        """Get status for multiple series efficiently.
+
+        Returns dict mapping tmdb_id -> status ('available', 'added', or None)
+
+        Note: Sonarr uses TVDB IDs internally, so we need to check via TMDB ID
+        stored in series data or fall back to lookup.
+        """
+        # Fetch all series once
+        all_series = await self.get_all_series()
+
+        # Build lookup by tvdb_id for series in library
+        # Sonarr series have statistics that tell us if all episodes are downloaded
+        tvdb_to_status = {}
+        for series in all_series:
+            tvdb_id = series.get("tvdbId")
+            if tvdb_id:
+                stats = series.get("statistics", {})
+                if stats.get("percentOfEpisodes", 0) == 100:
+                    tvdb_to_status[tvdb_id] = "available"
+                else:
+                    tvdb_to_status[tvdb_id] = "added"
+
+        # For each requested TMDB ID, we need to find its TVDB ID
+        # This requires looking up each one, but we can cache results
+        results = {}
+        for tmdb_id in tmdb_ids:
+            # Look up series to get TVDB ID
+            series = await self.lookup_series(tmdb_id)
+            if series:
+                tvdb_id = series.get("tvdbId")
+                if tvdb_id and tvdb_id in tvdb_to_status:
+                    results[tmdb_id] = tvdb_to_status[tvdb_id]
+                else:
+                    results[tmdb_id] = None
+            else:
+                results[tmdb_id] = None
+
+        return results
