@@ -14,7 +14,11 @@ def db():
     os.makedirs("data", exist_ok=True)
     init_db()
     db = next(get_db())
+    # Clean up any existing settings before test
+    db.query(Settings).delete()
+    db.commit()
     yield db
+    # Clean up after test
     db.query(Settings).delete()
     db.commit()
     db.close()
