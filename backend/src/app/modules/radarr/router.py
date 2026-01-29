@@ -1,5 +1,5 @@
 """Radarr API routes."""
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from httpx import HTTPStatusError, TimeoutException
 
 from app.config import settings
@@ -76,3 +76,12 @@ async def get_batch_status(
 async def get_radarr_queue(client: RadarrClient = Depends(get_radarr_client)):
     """Get current download queue from Radarr."""
     return await client.get_queue()
+
+
+@router.get("/recent")
+async def get_radarr_recent(
+    limit: int = Query(20, le=100),
+    client: RadarrClient = Depends(get_radarr_client)
+):
+    """Get recently added movies from Radarr."""
+    return await client.get_recent(limit)

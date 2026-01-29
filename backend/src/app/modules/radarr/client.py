@@ -127,3 +127,13 @@ class RadarrClient:
             "includeMovie": True
         }
         return await self._get("/queue", params)
+
+    async def get_recent(self, limit: int = 20) -> list:
+        """Get recently added movies from Radarr."""
+        movies = await self._get("/movie")
+
+        # Sort by added date, most recent first
+        movies.sort(key=lambda m: m.get("added", ""), reverse=True)
+
+        # Return only movies with files (completed downloads)
+        return [m for m in movies if m.get("hasFile")][:limit]
