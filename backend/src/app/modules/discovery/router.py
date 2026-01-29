@@ -1,11 +1,14 @@
 """Discovery API routes."""
+from typing import Optional
 from fastapi import APIRouter, Query
 
 from app.config import settings
 from app.schemas import MediaList, MediaResponse
 from .tmdb_client import TMDBClient
+from .schemas import DiscoveryFilters
 
 router = APIRouter(prefix="/api/discover", tags=["discovery"])
+genres_router = APIRouter(prefix="/api/genres", tags=["genres"])
 
 tmdb_client = TMDBClient(api_key=settings.tmdb_api_key)
 
@@ -76,6 +79,91 @@ async def get_trending_shows(page: int = Query(1, ge=1)):
     )
 
 
+@router.get("/movies", response_model=MediaList)
+async def discover_movies(
+    page: int = Query(1, ge=1),
+    genre: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    year_gte: Optional[int] = Query(None),
+    year_lte: Optional[int] = Query(None),
+    rating_gte: Optional[float] = Query(None, ge=0, le=10),
+    certification: Optional[str] = Query(None),
+    sort_by: str = Query("popularity.desc"),
+):
+    """Discover movies with filters.
+
+    Args:
+        page: Page number (default 1).
+        genre: Comma-separated genre IDs.
+        year: Exact release year.
+        year_gte: Released on or after year.
+        year_lte: Released on or before year.
+        rating_gte: Minimum rating (0-10).
+        certification: Content rating (G, PG, PG-13, R).
+        sort_by: Sort order (default: popularity.desc).
+
+    Returns:
+        MediaList with filtered movies.
+    """
+    filters = DiscoveryFilters(
+        genre=genre,
+        year=year,
+        year_gte=year_gte,
+        year_lte=year_lte,
+        rating_gte=rating_gte,
+        certification=certification,
+        sort_by=sort_by,
+    )
+    data = await tmdb_client.discover_movies(page=page, filters=filters.to_tmdb_params("movie"))
+    return MediaList(
+        results=[_transform_tmdb_result(item, "movie") for item in data["results"]],
+        page=data["page"],
+        total_pages=data["total_pages"],
+        total_results=data["total_results"],
+    )
+
+
+@router.get("/shows", response_model=MediaList)
+async def discover_shows(
+    page: int = Query(1, ge=1),
+    genre: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    year_gte: Optional[int] = Query(None),
+    year_lte: Optional[int] = Query(None),
+    rating_gte: Optional[float] = Query(None, ge=0, le=10),
+    sort_by: str = Query("popularity.desc"),
+):
+    """Discover TV shows with filters.
+
+    Args:
+        page: Page number (default 1).
+        genre: Comma-separated genre IDs.
+        year: Exact first air year.
+        year_gte: First aired on or after year.
+        year_lte: First aired on or before year.
+        rating_gte: Minimum rating (0-10).
+        sort_by: Sort order (default: popularity.desc).
+
+    Returns:
+        MediaList with filtered TV shows.
+    """
+    filters = DiscoveryFilters(
+        genre=genre,
+        year=year,
+        year_gte=year_gte,
+        year_lte=year_lte,
+        rating_gte=rating_gte,
+        sort_by=sort_by,
+    )
+    data = await tmdb_client.discover_shows(page=page, filters=filters.to_tmdb_params("tv"))
+    return MediaList(
+        results=[_transform_tmdb_result(item, "show") for item in data["results"]],
+        page=data["page"],
+        total_pages=data["total_pages"],
+        total_results=data["total_results"],
+    )
+
+
 @router.get("/search", response_model=MediaList)
 async def search(q: str = Query(..., min_length=1), page: int = Query(1, ge=1)):
     """Search for movies and TV shows.
@@ -127,3 +215,16 @@ async def get_similar(tmdb_id: int, media_type: str = Query(...)):
         total_pages=1,
         total_results=len(data["results"]),
     )
+
+
+# Genre endpoints
+@genres_router.get("/movies")
+async def get_movie_genres():
+    """Get list of movie genres."""
+    return await tmdb_client.get_movie_genres()
+
+
+@genres_router.get("/shows")
+async def get_tv_genres():
+    """Get list of TV show genres."""
+    return await tmdb_client.get_tv_genres()

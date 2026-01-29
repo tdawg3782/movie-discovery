@@ -111,3 +111,31 @@ class TMDBClient:
         validated_type = self._validate_media_type(media_type)
         endpoint = f"/{validated_type}/{tmdb_id}"
         return await self._get(endpoint)
+
+    async def get_movie_genres(self) -> dict[str, Any]:
+        """Get list of movie genres from TMDB."""
+        return await self._get("/genre/movie/list")
+
+    async def get_tv_genres(self) -> dict[str, Any]:
+        """Get list of TV genres from TMDB."""
+        return await self._get("/genre/tv/list")
+
+    async def discover_movies(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        """Discover movies with optional filters."""
+        params = {
+            "page": page,
+            "include_adult": False,
+        }
+        if filters:
+            params.update(filters)
+        return await self._get("/discover/movie", params)
+
+    async def discover_shows(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        """Discover TV shows with optional filters."""
+        params = {
+            "page": page,
+            "include_adult": False,
+        }
+        if filters:
+            params.update(filters)
+        return await self._get("/discover/tv", params)

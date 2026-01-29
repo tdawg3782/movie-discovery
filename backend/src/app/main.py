@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.modules.discovery import router as discovery_router
+from app.modules.discovery import router as discovery_router, genres_router
 from app.modules.watchlist import router as watchlist_router
 from app.modules.radarr import router as radarr_router
 from app.modules.sonarr import router as sonarr_router
@@ -40,6 +40,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(discovery_router)
+app.include_router(genres_router)
 app.include_router(watchlist_router)
 app.include_router(radarr_router)
 app.include_router(sonarr_router)
