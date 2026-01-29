@@ -119,3 +119,23 @@ class TMDBClient:
     async def get_tv_genres(self) -> dict[str, Any]:
         """Get list of TV genres from TMDB."""
         return await self._get("/genre/tv/list")
+
+    async def discover_movies(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        """Discover movies with optional filters."""
+        params = {
+            "page": page,
+            "include_adult": False,
+        }
+        if filters:
+            params.update(filters)
+        return await self._get("/discover/movie", params)
+
+    async def discover_shows(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        """Discover TV shows with optional filters."""
+        params = {
+            "page": page,
+            "include_adult": False,
+        }
+        if filters:
+            params.update(filters)
+        return await self._get("/discover/tv", params)
