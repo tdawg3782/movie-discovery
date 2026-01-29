@@ -10,6 +10,7 @@ from app.modules.discovery import router as discovery_router
 from app.modules.watchlist import router as watchlist_router
 from app.modules.radarr import router as radarr_router
 from app.modules.sonarr import router as sonarr_router
+from app.modules.library import router as library_router
 
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ app.include_router(discovery_router)
 app.include_router(watchlist_router)
 app.include_router(radarr_router)
 app.include_router(sonarr_router)
+app.include_router(library_router)
 
 
 @app.get("/health")
