@@ -43,6 +43,7 @@ class Watchlist(Base):
     media_type: Mapped[str] = mapped_column(String(10))
     added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, added, downloading
 
     __table_args__ = (
         {"sqlite_autoincrement": True},

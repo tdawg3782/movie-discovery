@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import WatchlistAdd, WatchlistItem, WatchlistResponse
 from .service import WatchlistService
+from .schemas import BatchProcessRequest, BatchProcessResponse, BatchDeleteRequest
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
@@ -26,6 +27,7 @@ async def get_watchlist(service: WatchlistService = Depends(get_service)):
                 title=f"TMDB:{item.tmdb_id}",  # Would be enriched with cache
                 added_at=item.added_at,
                 notes=item.notes,
+                status=item.status,
             )
             for item in items
         ],
@@ -48,9 +50,30 @@ async def add_to_watchlist(
         title=f"TMDB:{item.tmdb_id}",
         added_at=item.added_at,
         notes=item.notes,
+        status=item.status,
     )
 
 
+# Batch endpoints must come BEFORE parameterized endpoints
+@router.post("/process", response_model=BatchProcessResponse)
+async def process_watchlist_items(
+    request: BatchProcessRequest, service: WatchlistService = Depends(get_service)
+):
+    """Process watchlist items by sending to Radarr/Sonarr."""
+    processed, failed = await service.process_batch(request.ids, request.media_type)
+    return BatchProcessResponse(processed=processed, failed=failed)
+
+
+@router.delete("/batch")
+async def delete_watchlist_items(
+    request: BatchDeleteRequest, service: WatchlistService = Depends(get_service)
+):
+    """Delete multiple watchlist items by TMDB ID."""
+    count = service.delete_batch(request.ids)
+    return {"deleted": count}
+
+
+# Parameterized endpoint must come AFTER specific endpoints
 @router.delete("/{item_id}")
 async def remove_from_watchlist(
     item_id: int, service: WatchlistService = Depends(get_service)
