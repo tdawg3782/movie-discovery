@@ -60,6 +60,7 @@ import { ref, watch, onMounted } from 'vue'
 import MediaCard from '../components/MediaCard.vue'
 import { discoverService } from '../services/discover'
 import { libraryService } from '../services/library'
+import { watchlistService } from '../services/watchlist'
 
 const activeTab = ref('movies')
 const items = ref([])
@@ -188,21 +189,18 @@ const fetchTrendingPage = async (page) => {
 
 const handleAdd = async (media) => {
   try {
-    // Use media_type from the item (for search results which mix movies and shows)
+    // Add to watchlist instead of directly to Radarr/Sonarr
     const mediaType = media.media_type || (activeTab.value === 'movies' ? 'movie' : 'show')
-    if (mediaType === 'movie') {
-      await libraryService.addMovie(media.tmdb_id)
-    } else {
-      await libraryService.addShow(media.tmdb_id)
-    }
-    // Update local state to reflect the change
+    await watchlistService.add(media.tmdb_id, mediaType)
+
+    // Update local state to show item is in watchlist
     const index = items.value.findIndex(item => item.tmdb_id === media.tmdb_id && item.media_type === media.media_type)
     if (index !== -1) {
-      items.value[index] = { ...items.value[index], library_status: 'added' }
+      items.value[index] = { ...items.value[index], library_status: 'watchlist' }
     }
   } catch (err) {
-    console.error('Failed to add to library:', err)
-    alert(err.response?.data?.detail || 'Failed to add to library')
+    console.error('Failed to add to watchlist:', err)
+    alert(err.response?.data?.detail || 'Failed to add to watchlist')
   }
 }
 

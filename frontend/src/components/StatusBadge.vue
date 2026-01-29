@@ -21,6 +21,7 @@ const label = computed(() => {
     case 'available': return serviceName.value
     case 'downloading': return 'Downloading'
     case 'added': return serviceName.value
+    case 'watchlist': return 'In Watchlist'
     default: return 'Add'
   }
 })
@@ -29,6 +30,7 @@ const badgeClass = computed(() => {
   if (props.status === 'available') return 'in-library'
   if (props.status === 'added') return 'added'
   if (props.status === 'downloading') return 'downloading'
+  if (props.status === 'watchlist') return 'watchlist'
   return 'add'
 })
 </script>
@@ -50,6 +52,10 @@ const badgeClass = computed(() => {
 }
 .added {
   background: #3b82f6;
+  color: white;
+}
+.watchlist {
+  background: #8b5cf6;
   color: white;
 }
 .add {
