@@ -143,3 +143,13 @@ class SonarrClient:
                 results[tmdb_id] = None
 
         return results
+
+    async def get_queue(self) -> dict:
+        """Get current download queue from Sonarr."""
+        params = {
+            "page": 1,
+            "pageSize": 50,
+            "includeSeries": True,
+            "includeEpisode": True
+        }
+        return await self._get("/queue", params)

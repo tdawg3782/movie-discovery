@@ -70,3 +70,9 @@ async def get_batch_status(
         raise HTTPException(
             status_code=503, detail=f"Sonarr API error: {e.response.status_code}"
         )
+
+
+@router.get("/queue")
+async def get_sonarr_queue(client: SonarrClient = Depends(get_sonarr_client)):
+    """Get current download queue from Sonarr."""
+    return await client.get_queue()
