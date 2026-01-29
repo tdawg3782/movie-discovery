@@ -81,3 +81,18 @@ def test_delete_nonexistent_returns_404(client):
     """Verify DELETE returns 404 for non-existent items."""
     response = client.delete("/api/watchlist/99999")
     assert response.status_code == 404
+
+
+def test_get_watchlist_includes_status(client):
+    """GET /api/watchlist should include status field."""
+    client.post("/api/watchlist", json={
+        "tmdb_id": 999,
+        "media_type": "movie"
+    })
+
+    response = client.get("/api/watchlist")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["items"]) > 0
+    assert "status" in data["items"][0]
+    assert data["items"][0]["status"] == "pending"

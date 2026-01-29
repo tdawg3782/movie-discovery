@@ -48,6 +48,7 @@ class WatchlistItem(MediaBase):
     id: int
     added_at: datetime
     notes: str | None = None
+    status: str = "pending"  # pending, added, downloading
 
 
 class WatchlistResponse(BaseModel):
