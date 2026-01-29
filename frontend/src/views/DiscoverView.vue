@@ -25,19 +25,26 @@
       </button>
     </div>
 
+    <!-- Filter Panel -->
+    <FilterPanel
+      v-if="!isSearching"
+      :media-type="activeTab === 'movies' ? 'movie' : 'show'"
+      @filter-change="handleFilterChange"
+    />
+
     <div v-if="isSearching" class="search-header">
       <span>Search results for "{{ searchQuery }}"</span>
     </div>
 
-    <div v-if="loading" class="loading">{{ isSearching ? 'Searching...' : `Loading trending ${activeTab}...` }}</div>
+    <div v-if="loading" class="loading">{{ isSearching ? 'Searching...' : isFiltering ? `Loading ${activeTab}...` : `Loading trending ${activeTab}...` }}</div>
 
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
-      <button @click="fetchTrending">Retry</button>
+      <button @click="fetchContent">Retry</button>
     </div>
 
     <div v-else-if="items.length === 0" class="empty">
-      No trending {{ activeTab }} found.
+      {{ isFiltering ? `No ${activeTab} match your filters.` : `No trending ${activeTab} found.` }}
     </div>
 
     <div v-else class="media-grid">
@@ -56,8 +63,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import MediaCard from '../components/MediaCard.vue'
+import FilterPanel from '../components/FilterPanel.vue'
 import { discoverService } from '../services/discover'
 import { libraryService } from '../services/library'
 
@@ -69,6 +77,16 @@ const searchQuery = ref('')
 const isSearching = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
+const isFiltering = ref(false)
+
+const filters = reactive({
+  genre: null,
+  yearGte: null,
+  yearLte: null,
+  ratingGte: null,
+  certification: null,
+  sortBy: 'popularity.desc'
+})
 
 const fetchLibraryStatuses = async (mediaItems) => {
   if (!mediaItems.length) return
@@ -96,28 +114,9 @@ const fetchLibraryStatuses = async (mediaItems) => {
   }
 }
 
-const fetchTrending = async () => {
-  loading.value = true
-  error.value = null
+const fetchTrending = () => {
   isSearching.value = false
-  currentPage.value = 1
-
-  try {
-    const response = activeTab.value === 'movies'
-      ? await discoverService.getTrendingMovies()
-      : await discoverService.getTrendingShows()
-
-    items.value = response.results || []
-    totalPages.value = response.total_pages || 1
-
-    // Fetch library statuses for the loaded items
-    await fetchLibraryStatuses(items.value)
-  } catch (err) {
-    error.value = err.response?.data?.detail || 'Failed to load trending content'
-    items.value = []
-  } finally {
-    loading.value = false
-  }
+  fetchContent()
 }
 
 const performSearch = async (page = 1, append = false) => {
@@ -151,7 +150,58 @@ const clearSearch = () => {
   searchQuery.value = ''
   isSearching.value = false
   currentPage.value = 1
-  fetchTrending()
+  fetchContent()
+}
+
+const handleFilterChange = (newFilters) => {
+  Object.assign(filters, newFilters)
+  isFiltering.value = !!(
+    newFilters.genre ||
+    newFilters.yearGte ||
+    newFilters.yearLte ||
+    newFilters.ratingGte ||
+    newFilters.certification ||
+    newFilters.sortBy !== 'popularity.desc'
+  )
+  currentPage.value = 1
+  fetchContent()
+}
+
+const fetchContent = async (page = 1, append = false) => {
+  loading.value = true
+  error.value = null
+  currentPage.value = page
+
+  try {
+    let response
+    if (isFiltering.value) {
+      // Use discover endpoints with filters
+      const options = {
+        page,
+        ...filters
+      }
+      response = activeTab.value === 'movies'
+        ? await discoverService.discoverMovies(options)
+        : await discoverService.discoverShows(options)
+    } else {
+      // Use trending endpoints
+      response = activeTab.value === 'movies'
+        ? await discoverService.getTrendingMovies(page)
+        : await discoverService.getTrendingShows(page)
+    }
+
+    const newResults = response.results || []
+    items.value = append ? [...items.value, ...newResults] : newResults
+    totalPages.value = response.total_pages || 1
+
+    // Fetch library statuses
+    await fetchLibraryStatuses(append ? newResults : items.value)
+  } catch (err) {
+    error.value = err.response?.data?.detail || 'Failed to load content'
+    if (!append) items.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 const loadNextPage = () => {
@@ -159,30 +209,8 @@ const loadNextPage = () => {
     if (isSearching.value) {
       performSearch(currentPage.value + 1, true)
     } else {
-      fetchTrendingPage(currentPage.value + 1)
+      fetchContent(currentPage.value + 1, true)
     }
-  }
-}
-
-const fetchTrendingPage = async (page) => {
-  loading.value = true
-  currentPage.value = page
-
-  try {
-    const response = activeTab.value === 'movies'
-      ? await discoverService.getTrendingMovies(page)
-      : await discoverService.getTrendingShows(page)
-
-    const newResults = response.results || []
-    items.value = [...items.value, ...newResults]
-    totalPages.value = response.total_pages || 1
-
-    // Fetch library statuses for new items
-    await fetchLibraryStatuses(newResults)
-  } catch (err) {
-    error.value = 'Failed to load more content'
-  } finally {
-    loading.value = false
   }
 }
 
