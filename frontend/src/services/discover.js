@@ -40,4 +40,12 @@ export const discoverService = {
     if (options.sortBy) params.sort_by = options.sortBy
     return api.get('/discover/shows', { params })
   },
+
+  // Detail endpoints
+  getPerson: (personId) => api.get(`/discover/person/${personId}`),
+  getMovieDetail: (movieId) => api.get(`/discover/movies/${movieId}`),
+  getShowDetail: (showId) => api.get(`/discover/shows/${showId}`),
+  getCollection: (collectionId) => api.get(`/discover/collection/${collectionId}`),
 }
+
+export default discoverService

@@ -1,6 +1,6 @@
 """Discovery API routes."""
 from typing import Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.config import settings
 from app.schemas import MediaList, MediaResponse
@@ -228,3 +228,68 @@ async def get_movie_genres():
 async def get_tv_genres():
     """Get list of TV show genres."""
     return await tmdb_client.get_tv_genres()
+
+
+# Detail endpoints
+@router.get("/person/{person_id}")
+async def get_person(person_id: int):
+    """Get person details with filmography.
+
+    Args:
+        person_id: TMDB person ID.
+
+    Returns:
+        Person details with combined credits.
+    """
+    data = await tmdb_client.get_person(person_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return data
+
+
+@router.get("/movies/{movie_id}")
+async def get_movie_detail(movie_id: int):
+    """Get movie details with cast, videos, and recommendations.
+
+    Args:
+        movie_id: TMDB movie ID.
+
+    Returns:
+        Movie details with credits, videos, and recommendations.
+    """
+    data = await tmdb_client.get_movie_detail(movie_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    return data
+
+
+@router.get("/shows/{show_id}")
+async def get_show_detail(show_id: int):
+    """Get TV show details with cast, videos, and recommendations.
+
+    Args:
+        show_id: TMDB show ID.
+
+    Returns:
+        Show details with credits, videos, and recommendations.
+    """
+    data = await tmdb_client.get_show_detail(show_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Show not found")
+    return data
+
+
+@router.get("/collection/{collection_id}")
+async def get_collection(collection_id: int):
+    """Get collection details with all movies.
+
+    Args:
+        collection_id: TMDB collection ID.
+
+    Returns:
+        Collection details with all movies in the collection.
+    """
+    data = await tmdb_client.get_collection(collection_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return data

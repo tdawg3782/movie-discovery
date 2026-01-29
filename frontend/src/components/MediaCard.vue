@@ -1,5 +1,5 @@
 <template>
-  <div class="media-card">
+  <router-link :to="detailLink" class="media-card">
     <div class="poster">
       <img
         v-if="media.poster_path"
@@ -11,7 +11,7 @@
         :status="media.library_status"
         :media-type="media.media_type"
         class="status-overlay"
-        @click="handleAdd"
+        @click.prevent="handleAdd"
       />
     </div>
     <div class="info">
@@ -21,10 +21,11 @@
         <span v-if="media.vote_average">• {{ media.vote_average.toFixed(1) }}</span>
       </p>
     </div>
-  </div>
+  </router-link>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps({
@@ -32,6 +33,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['add'])
+
+const detailLink = computed(() => {
+  const type = props.media.media_type === 'movie' ? 'movie' : 'tv'
+  return `/${type}/${props.media.tmdb_id}`
+})
 
 const handleAdd = () => {
   if (!props.media.library_status) {
@@ -42,6 +48,9 @@ const handleAdd = () => {
 
 <style scoped>
 .media-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
   background: #1a1a1a;
   border-radius: 8px;
   overflow: hidden;

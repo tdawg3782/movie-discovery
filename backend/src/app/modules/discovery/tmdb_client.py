@@ -139,3 +139,76 @@ class TMDBClient:
         if filters:
             params.update(filters)
         return await self._get("/discover/tv", params)
+
+    async def get_person(self, person_id: int) -> dict[str, Any] | None:
+        """Get person details with combined credits.
+
+        Args:
+            person_id: TMDB person ID.
+
+        Returns:
+            Person details dict or None if not found.
+        """
+        try:
+            return await self._get(
+                f"/person/{person_id}",
+                {"append_to_response": "combined_credits"},
+            )
+        except TMDBAPIError as e:
+            if "404" in str(e):
+                return None
+            raise
+
+    async def get_movie_detail(self, movie_id: int) -> dict[str, Any] | None:
+        """Get movie details with credits, videos, and recommendations.
+
+        Args:
+            movie_id: TMDB movie ID.
+
+        Returns:
+            Movie details dict or None if not found.
+        """
+        try:
+            return await self._get(
+                f"/movie/{movie_id}",
+                {"append_to_response": "credits,videos,recommendations"},
+            )
+        except TMDBAPIError as e:
+            if "404" in str(e):
+                return None
+            raise
+
+    async def get_show_detail(self, show_id: int) -> dict[str, Any] | None:
+        """Get TV show details with credits, videos, and recommendations.
+
+        Args:
+            show_id: TMDB show ID.
+
+        Returns:
+            Show details dict or None if not found.
+        """
+        try:
+            return await self._get(
+                f"/tv/{show_id}",
+                {"append_to_response": "credits,videos,recommendations"},
+            )
+        except TMDBAPIError as e:
+            if "404" in str(e):
+                return None
+            raise
+
+    async def get_collection(self, collection_id: int) -> dict[str, Any] | None:
+        """Get collection details with all movies.
+
+        Args:
+            collection_id: TMDB collection ID.
+
+        Returns:
+            Collection details dict or None if not found.
+        """
+        try:
+            return await self._get(f"/collection/{collection_id}")
+        except TMDBAPIError as e:
+            if "404" in str(e):
+                return None
+            raise
