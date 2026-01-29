@@ -1,30 +1,28 @@
 # Movie Discovery
 
-A local movie and TV show discovery app with Sonarr/Radarr integration. Discover trending content, search for titles, and add them to your media server with one click.
+A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, filter, and add content to your media server.
 
 ## Features
 
-- Browse trending movies and TV shows via TMDB
-- Search for any movie or TV show
-- See library status (available, downloading, added)
-- One-click add to Sonarr (TV) or Radarr (Movies)
-- Watchlist for saving items to review later
-- Pagination with "Load More" for browsing
-- Dark theme UI
+| Feature | Description |
+|---------|-------------|
+| **Discovery** | Browse trending movies and shows, filter by genre/year/rating |
+| **Search** | Find any movie or TV show |
+| **Detail Pages** | View trailers, cast, recommendations, collections |
+| **Person Pages** | Browse actor/director filmographies |
+| **Watchlist** | Stage items before adding to library (batch processing) |
+| **Library Monitor** | See recent additions and download progress |
+| **Settings** | Configure API keys via UI |
 
-## Screenshots
+## Navigation
 
-| Discover | Search |
-|----------|--------|
-| Browse trending content | Find any title |
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend | Python 3.11+, FastAPI, SQLAlchemy, SQLite |
-| Frontend | Vue 3, Vite, Pinia, Axios |
-| APIs | TMDB (discovery), Sonarr (TV), Radarr (Movies) |
+```
+Discover → Watchlist → Library → Settings
+    ↓
+  [poster click]
+    ↓
+Detail Page → Person Page → Collection Page
+```
 
 ## Quick Start
 
@@ -32,102 +30,154 @@ A local movie and TV show discovery app with Sonarr/Radarr integration. Discover
 
 - Python 3.11+
 - Node.js 18+
-- Sonarr and/or Radarr running (local or network)
 - [TMDB API key](https://www.themoviedb.org/settings/api)
+- Sonarr and/or Radarr (optional, for library integration)
 
 ### Installation
 
-1. **Clone and configure:**
-   ```bash
-   git clone <repo-url>
-   cd movie_discovery
-   cp .env.example .env
-   ```
-
-2. **Edit `.env` with your settings:**
-   ```
-   TMDB_API_KEY=your_tmdb_api_key
-   SONARR_URL=http://your-sonarr-ip:8989
-   SONARR_API_KEY=your_sonarr_api_key
-   RADARR_URL=http://your-radarr-ip:7878
-   RADARR_API_KEY=your_radarr_api_key
-   ```
-
-3. **Install backend:**
-   ```bash
-   cd backend
-   pip install -e ".[dev]"
-   ```
-
-4. **Install frontend:**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-5. **Start the app:**
-   ```bash
-   # From project root
-   start.bat
-   ```
-
-6. **Open** http://localhost:3000
-
-### Manual Start
-
-If you prefer to start servers manually:
-
 ```bash
-# Terminal 1 - Backend
-cd backend
-uvicorn src.app.main:app --reload
+git clone <repo-url>
+cd movie_discovery
 
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
+# Backend
+cd backend
+pip install -e ".[dev]"
+
+# Frontend
+cd ../frontend
+npm install
+
+# Start
+cd ..
+start.bat
 ```
 
-## Configuration
+Open http://localhost:3000
 
-### Environment Variables
+### First-Time Setup
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `TMDB_API_KEY` | TMDB API key for discovery | `abc123...` |
-| `SONARR_URL` | Sonarr server URL | `http://192.168.1.100:8989` |
-| `SONARR_API_KEY` | Sonarr API key | `xyz789...` |
-| `RADARR_URL` | Radarr server URL | `http://192.168.1.100:7878` |
-| `RADARR_API_KEY` | Radarr API key | `def456...` |
-| `DATABASE_PATH` | SQLite database path | `./data/movie_discovery.db` |
+1. Go to **Settings** (`/settings`)
+2. Enter your API keys (TMDB required, Radarr/Sonarr optional)
+3. Click **Test** to verify each connection
+4. Click **Save**
 
-### Getting API Keys
+Alternatively, create `.env` in the project root:
 
-- **TMDB**: Create account at [themoviedb.org](https://www.themoviedb.org/), go to Settings > API
-- **Sonarr**: Settings > General > Security > API Key
-- **Radarr**: Settings > General > Security > API Key
+```
+TMDB_API_KEY=your_key
+RADARR_URL=http://localhost:7878
+RADARR_API_KEY=your_key
+SONARR_URL=http://localhost:8989
+SONARR_API_KEY=your_key
+```
+
+## Usage
+
+### Discovering Content
+
+1. Browse trending on the **Discover** page
+2. Use **Filters** to narrow by genre, year, rating
+3. Click any poster to view details
+4. Click **+** to add to your watchlist
+
+### Adding to Library
+
+1. Go to **Watchlist**
+2. Select items with checkboxes
+3. Click **Add to Library**
+4. Confirm in the modal
+
+### Monitoring Downloads
+
+1. Go to **Library**
+2. **Downloads** tab shows active queue with progress
+3. **Recently Added** tab shows completed items
+4. Toggle **Auto-refresh** for live updates
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.11, FastAPI, SQLAlchemy, SQLite |
+| Frontend | Vue 3, Vite, Pinia, Axios |
+| APIs | TMDB, Radarr, Sonarr |
+
+## Project Structure
+
+```
+movie_discovery/
+├── backend/src/app/
+│   ├── modules/
+│   │   ├── discovery/    # TMDB: trending, search, filters, details
+│   │   ├── watchlist/    # Watchlist CRUD, batch processing
+│   │   ├── radarr/       # Movies: status, add, queue, recent
+│   │   ├── sonarr/       # TV: status, add, queue, recent
+│   │   ├── settings/     # API key management
+│   │   └── library/      # Combined activity feed
+│   ├── config.py
+│   ├── models.py
+│   └── main.py
+├── frontend/src/
+│   ├── views/
+│   │   ├── DiscoverView.vue
+│   │   ├── WatchlistView.vue
+│   │   ├── LibraryView.vue
+│   │   ├── SettingsView.vue
+│   │   ├── MediaDetailView.vue
+│   │   ├── PersonView.vue
+│   │   └── CollectionView.vue
+│   ├── components/
+│   │   ├── FilterPanel.vue
+│   │   ├── TrailerModal.vue
+│   │   ├── CastCarousel.vue
+│   │   └── ...
+│   └── services/
+├── start.bat
+└── stop.bat
+```
 
 ## API Endpoints
 
 ### Discovery
-- `GET /api/discover/movies/trending` - Trending movies
-- `GET /api/discover/shows/trending` - Trending TV shows
-- `GET /api/discover/search?q=query` - Search movies and shows
-
-### Radarr (Movies)
-- `GET /api/radarr/status/{tmdb_id}` - Check movie status
-- `POST /api/radarr/add` - Add movie to Radarr
-
-### Sonarr (TV Shows)
-- `GET /api/sonarr/status/{tmdb_id}` - Check show status
-- `POST /api/sonarr/add` - Add show to Sonarr
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/discover/movies/trending` | Trending movies |
+| GET | `/api/discover/shows/trending` | Trending shows |
+| GET | `/api/discover/movies?genre=28&year=2024` | Filtered movies |
+| GET | `/api/discover/shows?genre=18&rating_gte=8` | Filtered shows |
+| GET | `/api/discover/search?q=query` | Search |
+| GET | `/api/discover/movies/{id}` | Movie details |
+| GET | `/api/discover/shows/{id}` | Show details |
+| GET | `/api/discover/person/{id}` | Person details |
+| GET | `/api/discover/collection/{id}` | Collection |
+| GET | `/api/genres/movies` | Movie genres |
+| GET | `/api/genres/shows` | TV genres |
 
 ### Watchlist
-- `GET /api/watchlist` - Get watchlist items
-- `POST /api/watchlist` - Add to watchlist
-- `DELETE /api/watchlist/{id}` - Remove from watchlist
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/watchlist` | List items |
+| POST | `/api/watchlist` | Add item |
+| DELETE | `/api/watchlist/{id}` | Remove item |
+| POST | `/api/watchlist/process` | Batch add to library |
+| DELETE | `/api/watchlist/batch` | Batch delete |
 
-### Health
-- `GET /health` - API health check
+### Library
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/library/activity` | Recent additions |
+| GET | `/api/library/queue` | Download queue |
+| GET | `/api/radarr/queue` | Movie queue |
+| GET | `/api/radarr/recent` | Recent movies |
+| GET | `/api/sonarr/queue` | TV queue |
+| GET | `/api/sonarr/recent` | Recent shows |
+
+### Settings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/settings` | Get settings (keys masked) |
+| PUT | `/api/settings` | Update settings |
+| POST | `/api/settings/test` | Test connection |
 
 ## Development
 
@@ -135,59 +185,28 @@ npm run dev
 
 ```bash
 cd backend
-pytest -v                    # Run all tests
-pytest --cov=app             # With coverage
-pytest tests/test_discovery_router.py -v  # Single module
+pytest -v              # All tests
+pytest --cov=app       # With coverage
 ```
 
-### Project Structure
+### Manual Server Start
 
-```
-movie_discovery/
-├── backend/
-│   ├── src/app/
-│   │   ├── modules/
-│   │   │   ├── discovery/   # TMDB integration
-│   │   │   ├── watchlist/   # Watchlist feature
-│   │   │   ├── radarr/      # Radarr integration
-│   │   │   └── sonarr/      # Sonarr integration
-│   │   ├── config.py        # Environment settings
-│   │   ├── database.py      # SQLite setup
-│   │   ├── models.py        # SQLAlchemy models
-│   │   ├── schemas.py       # Pydantic schemas
-│   │   └── main.py          # FastAPI app
-│   └── tests/               # Backend tests
-├── frontend/
-│   ├── src/
-│   │   ├── views/           # Page components
-│   │   ├── components/      # Reusable components
-│   │   ├── services/        # API services
-│   │   ├── stores/          # Pinia stores
-│   │   └── router/          # Vue Router
-│   └── vite.config.js       # Vite configuration
-├── .env                     # Environment variables
-├── .env.example             # Environment template
-├── start.bat                # Start both servers
-└── stop.bat                 # Stop both servers
+```bash
+# Terminal 1
+cd backend && uvicorn src.app.main:app --reload
+
+# Terminal 2
+cd frontend && npm run dev
 ```
 
 ## Troubleshooting
 
-### "Internal Server Error" on trending/search
-- Ensure `.env` is in the project root (not in `backend/`)
-- Verify `TMDB_API_KEY` is set correctly
-
-### "Radarr/Sonarr API error"
-- Check URL is correct (include port)
-- Verify API key from Settings > General
-- Ensure Radarr/Sonarr is running
-
-### Movie/show already exists
-- The app now shows a clear message when a title is already in your library
-
-### Frontend shows error but API works
-- Clear browser cache and refresh
-- Check browser console for specific errors
+| Issue | Solution |
+|-------|----------|
+| "Internal Server Error" on discovery | Check TMDB_API_KEY in Settings or .env |
+| "Radarr/Sonarr API error" | Verify URL and API key in Settings |
+| Filters not working | Clear filters and try again |
+| Trailer not playing | Some titles don't have trailers on TMDB |
 
 ## License
 

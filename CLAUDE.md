@@ -1,82 +1,96 @@
 # Movie Discovery App
 
-## Bash Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `start.bat` | Start both backend and frontend servers |
-| `stop.bat` | Stop all running servers |
-| `cd backend && uvicorn src.app.main:app --reload` | Start backend only |
-| `cd frontend && npm run dev` | Start frontend only |
-| `cd backend && pytest -v` | Run backend tests |
-| `cd backend && pytest --cov=app` | Run tests with coverage |
+| `start.bat` | Start backend + frontend |
+| `stop.bat` | Stop all servers |
+| `cd backend && pytest -v` | Run tests |
+| `cd backend && pytest --cov=app` | Tests with coverage |
 
 ## Project Structure
 
 ```
-movie_discovery/
-├── backend/           # FastAPI Python backend
-│   └── src/app/
-│       ├── modules/   # Feature modules (discovery, watchlist, radarr, sonarr)
-│       ├── config.py  # Environment settings (loads from root .env)
-│       └── main.py    # FastAPI app entry point
-├── frontend/          # Vue 3 + Vite frontend
-│   └── src/
-│       ├── views/     # Page components
-│       ├── services/  # API service layer
-│       └── stores/    # Pinia stores
-└── .env               # Environment variables (IMPORTANT: at project root)
+backend/src/app/
+├── modules/
+│   ├── discovery/    # TMDB: trending, search, filters, details, person, collection
+│   ├── watchlist/    # CRUD, batch process, batch delete
+│   ├── radarr/       # Movie library: status, add, queue, recent
+│   ├── sonarr/       # TV library: status, add, queue, recent
+│   ├── settings/     # API key management (encrypted storage)
+│   └── library/      # Combined activity feed
+├── config.py         # Loads .env from project root
+├── models.py         # SQLAlchemy: Settings, Watchlist, MediaCache
+└── main.py           # FastAPI app
+
+frontend/src/
+├── views/            # DiscoverView, WatchlistView, LibraryView, SettingsView,
+│                     # MediaDetailView, PersonView, CollectionView
+├── components/       # FilterPanel, TrailerModal, CastCarousel, MediaCarousel,
+│                     # QueueItem, DownloadProgress, StatusBadge
+├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js
+└── router/           # Vue Router config
 ```
 
 ## Key Files
 
-- `backend/src/app/config.py` - Settings via pydantic-settings, loads `.env` from project root
-- `backend/src/app/modules/*/client.py` - API clients (TMDB, Radarr, Sonarr)
-- `backend/src/app/modules/*/router.py` - FastAPI route handlers
-- `frontend/src/services/api.js` - Axios instance (auto-unwraps response.data)
-- `frontend/src/views/DiscoverView.vue` - Main discovery page with search
+| File | Purpose |
+|------|---------|
+| `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls |
+| `backend/src/app/modules/discovery/router.py` | Discovery + detail endpoints |
+| `backend/src/app/modules/settings/service.py` | Encrypted settings storage |
+| `frontend/src/views/DiscoverView.vue` | Main page with filters |
+| `frontend/src/components/FilterPanel.vue` | Genre/year/rating filters |
 
 ## Code Style
 
-### Backend (Python)
+**Backend (Python):**
 - Type hints on all functions
-- Async/await for all I/O operations
-- Pydantic models for request/response schemas
-- HTTPException for API errors with meaningful messages
+- Async/await for I/O
+- Pydantic for schemas
+- HTTPException for errors
 
-### Frontend (Vue/JavaScript)
+**Frontend (Vue):**
 - Composition API with `<script setup>`
-- Services return unwrapped data (axios interceptor handles `.data`)
-- Pinia for state management
+- Services auto-unwrap `response.data`
 
-## Environment Variables
+## Environment
 
-IMPORTANT: The `.env` file MUST be in the project root (not in backend/).
+IMPORTANT: `.env` must be in project root (not backend/).
 
 ```
-TMDB_API_KEY=xxx          # Required for discovery
-SONARR_URL=http://...     # Sonarr server URL
-SONARR_API_KEY=xxx        # Sonarr API key
-RADARR_URL=http://...     # Radarr server URL
-RADARR_API_KEY=xxx        # Radarr API key
-DATABASE_PATH=./data/...  # SQLite database path
+TMDB_API_KEY=xxx
+RADARR_URL=http://...
+RADARR_API_KEY=xxx
+SONARR_URL=http://...
+SONARR_API_KEY=xxx
 ```
 
-## Common Issues
+Settings can also be configured via UI at `/settings`.
 
-### "Internal Server Error" on discovery endpoints
-- Check if `.env` is in project root (not backend/)
-- Verify TMDB_API_KEY is set correctly
+## Routes
 
-### "Radarr/Sonarr API error: 400"
-- Quality profile auto-detected from first available profile
-- Check if movie/show already exists in library (returns clear error message)
+| Path | View |
+|------|------|
+| `/` | DiscoverView (trending + filters) |
+| `/watchlist` | WatchlistView (staging queue) |
+| `/library` | LibraryView (recent + downloads) |
+| `/settings` | SettingsView (API keys) |
+| `/movie/:id` | MediaDetailView |
+| `/tv/:id` | MediaDetailView |
+| `/person/:id` | PersonView |
+| `/collection/:id` | CollectionView |
 
-### Frontend shows "Failed to load" but API works
-- Services auto-unwrap `response.data` - access `response.results` not `response.data.results`
+## Workflow
+
+1. **Add to Watchlist** - Click "+" on any poster
+2. **Review in Watchlist** - Select items, batch process
+3. **Monitor in Library** - See downloads and recent additions
 
 ## Testing
 
-- Backend: 75 tests covering all modules
-- Run single module: `pytest tests/test_discovery_router.py -v`
-- MUST run tests before committing changes to backend
+Run tests before committing backend changes:
+```bash
+cd backend && pytest -v
+```
