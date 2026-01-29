@@ -111,3 +111,11 @@ class TMDBClient:
         validated_type = self._validate_media_type(media_type)
         endpoint = f"/{validated_type}/{tmdb_id}"
         return await self._get(endpoint)
+
+    async def get_movie_genres(self) -> dict[str, Any]:
+        """Get list of movie genres from TMDB."""
+        return await self._get("/genre/movie/list")
+
+    async def get_tv_genres(self) -> dict[str, Any]:
+        """Get list of TV genres from TMDB."""
+        return await self._get("/genre/tv/list")

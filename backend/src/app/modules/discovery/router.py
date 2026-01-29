@@ -6,6 +6,7 @@ from app.schemas import MediaList, MediaResponse
 from .tmdb_client import TMDBClient
 
 router = APIRouter(prefix="/api/discover", tags=["discovery"])
+genres_router = APIRouter(prefix="/api/genres", tags=["genres"])
 
 tmdb_client = TMDBClient(api_key=settings.tmdb_api_key)
 
@@ -127,3 +128,16 @@ async def get_similar(tmdb_id: int, media_type: str = Query(...)):
         total_pages=1,
         total_results=len(data["results"]),
     )
+
+
+# Genre endpoints
+@genres_router.get("/movies")
+async def get_movie_genres():
+    """Get list of movie genres."""
+    return await tmdb_client.get_movie_genres()
+
+
+@genres_router.get("/shows")
+async def get_tv_genres():
+    """Get list of TV show genres."""
+    return await tmdb_client.get_tv_genres()
