@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DiscoverView from '../views/DiscoverView.vue'
 import WatchlistView from '../views/WatchlistView.vue'
+import LibraryView from '../views/LibraryView.vue'
 
 const routes = [
   {
@@ -12,6 +13,11 @@ const routes = [
     path: '/watchlist',
     name: 'watchlist',
     component: WatchlistView
+  },
+  {
+    path: '/library',
+    name: 'library',
+    component: LibraryView
   }
 ]
 
