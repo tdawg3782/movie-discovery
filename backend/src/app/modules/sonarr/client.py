@@ -153,3 +153,12 @@ class SonarrClient:
             "includeEpisode": True
         }
         return await self._get("/queue", params)
+
+    async def get_recent(self, limit: int = 20) -> list:
+        """Get recently added shows from Sonarr."""
+        shows = await self._get("/series")
+
+        # Sort by added date, most recent first
+        shows.sort(key=lambda s: s.get("added", ""), reverse=True)
+
+        return shows[:limit]
