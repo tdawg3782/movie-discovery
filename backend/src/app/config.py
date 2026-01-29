@@ -1,5 +1,6 @@
 """Application configuration via environment variables."""
 from pathlib import Path
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,3 +32,23 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_setting(key: str) -> Optional[str]:
+    """Get a setting value, checking database first, then .env fallback."""
+    from app.database import SessionLocal
+    from app.modules.settings.service import SettingsService
+
+    try:
+        db = SessionLocal()
+        service = SettingsService(db)
+        value = service.get_raw_value(key)
+        db.close()
+        if value:
+            return value
+    except Exception:
+        pass
+
+    # Fallback to .env
+    env_value = getattr(settings, key, None)
+    return env_value if env_value else None
