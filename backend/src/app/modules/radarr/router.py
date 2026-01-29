@@ -70,3 +70,9 @@ async def get_batch_status(
         raise HTTPException(
             status_code=503, detail=f"Radarr API error: {e.response.status_code}"
         )
+
+
+@router.get("/queue")
+async def get_radarr_queue(client: RadarrClient = Depends(get_radarr_client)):
+    """Get current download queue from Radarr."""
+    return await client.get_queue()

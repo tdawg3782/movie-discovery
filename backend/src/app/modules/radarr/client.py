@@ -118,3 +118,12 @@ class RadarrClient:
 
         # Return status for requested IDs
         return {tmdb_id: library_map.get(tmdb_id) for tmdb_id in tmdb_ids}
+
+    async def get_queue(self) -> dict:
+        """Get current download queue from Radarr."""
+        params = {
+            "page": 1,
+            "pageSize": 50,
+            "includeMovie": True
+        }
+        return await self._get("/queue", params)
