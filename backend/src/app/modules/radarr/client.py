@@ -118,3 +118,22 @@ class RadarrClient:
 
         # Return status for requested IDs
         return {tmdb_id: library_map.get(tmdb_id) for tmdb_id in tmdb_ids}
+
+    async def get_queue(self) -> dict:
+        """Get current download queue from Radarr."""
+        params = {
+            "page": 1,
+            "pageSize": 50,
+            "includeMovie": True
+        }
+        return await self._get("/queue", params)
+
+    async def get_recent(self, limit: int = 20) -> list:
+        """Get recently added movies from Radarr."""
+        movies = await self._get("/movie")
+
+        # Sort by added date, most recent first
+        movies.sort(key=lambda m: m.get("added", ""), reverse=True)
+
+        # Return only movies with files (completed downloads)
+        return [m for m in movies if m.get("hasFile")][:limit]

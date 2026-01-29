@@ -143,3 +143,22 @@ class SonarrClient:
                 results[tmdb_id] = None
 
         return results
+
+    async def get_queue(self) -> dict:
+        """Get current download queue from Sonarr."""
+        params = {
+            "page": 1,
+            "pageSize": 50,
+            "includeSeries": True,
+            "includeEpisode": True
+        }
+        return await self._get("/queue", params)
+
+    async def get_recent(self, limit: int = 20) -> list:
+        """Get recently added shows from Sonarr."""
+        shows = await self._get("/series")
+
+        # Sort by added date, most recent first
+        shows.sort(key=lambda s: s.get("added", ""), reverse=True)
+
+        return shows[:limit]

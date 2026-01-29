@@ -5,6 +5,7 @@
       <nav>
         <router-link to="/">Discover</router-link>
         <router-link to="/watchlist">Watchlist</router-link>
+        <router-link to="/library">Library</router-link>
         <router-link to="/settings" class="settings-link" title="Settings">Settings</router-link>
       </nav>
     </header>

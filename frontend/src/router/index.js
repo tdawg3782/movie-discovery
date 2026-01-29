@@ -5,6 +5,7 @@ import SettingsView from '../views/SettingsView.vue'
 import MediaDetailView from '../views/MediaDetailView.vue'
 import PersonView from '../views/PersonView.vue'
 import CollectionView from '../views/CollectionView.vue'
+import LibraryView from '../views/LibraryView.vue'
 
 const routes = [
   {
@@ -43,6 +44,11 @@ const routes = [
     path: '/collection/:id',
     name: 'Collection',
     component: CollectionView
+  },
+  {
+    path: '/library',
+    name: 'library',
+    component: LibraryView
   }
 ]
 

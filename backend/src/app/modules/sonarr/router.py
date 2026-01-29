@@ -1,5 +1,5 @@
 """Sonarr API routes."""
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from httpx import HTTPStatusError, TimeoutException
 
 from app.config import settings
@@ -70,3 +70,18 @@ async def get_batch_status(
         raise HTTPException(
             status_code=503, detail=f"Sonarr API error: {e.response.status_code}"
         )
+
+
+@router.get("/queue")
+async def get_sonarr_queue(client: SonarrClient = Depends(get_sonarr_client)):
+    """Get current download queue from Sonarr."""
+    return await client.get_queue()
+
+
+@router.get("/recent")
+async def get_sonarr_recent(
+    limit: int = Query(20, le=100),
+    client: SonarrClient = Depends(get_sonarr_client)
+):
+    """Get recently added shows from Sonarr."""
+    return await client.get_recent(limit)
