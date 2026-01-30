@@ -40,6 +40,7 @@ class WatchlistAdd(BaseModel):
     tmdb_id: int
     media_type: str
     notes: str | None = None
+    selected_seasons: list[int] | None = None  # None = all seasons
 
 
 class WatchlistItem(MediaBase):
@@ -49,6 +50,8 @@ class WatchlistItem(MediaBase):
     added_at: datetime
     notes: str | None = None
     status: str = "pending"  # pending, added, downloading
+    selected_seasons: list[int] | None = None  # None = all seasons
+    total_seasons: int | None = None  # For display: "X of Y seasons"
 
 
 class WatchlistResponse(BaseModel):
