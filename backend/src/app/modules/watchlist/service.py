@@ -31,7 +31,7 @@ class WatchlistService:
             return existing
 
         # Convert seasons list to JSON string for storage
-        seasons_json = json.dumps(selected_seasons) if selected_seasons else None
+        seasons_json = json.dumps(selected_seasons) if selected_seasons is not None else None
 
         item = Watchlist(
             tmdb_id=tmdb_id,
@@ -55,6 +55,17 @@ class WatchlistService:
     def get_by_tmdb_id(self, tmdb_id: int) -> Watchlist | None:
         """Get watchlist item by TMDB ID."""
         return self.db.query(Watchlist).filter(Watchlist.tmdb_id == tmdb_id).first()
+
+    def update_seasons(self, tmdb_id: int, selected_seasons: list[int] | None) -> Watchlist | None:
+        """Update selected seasons for a watchlist item."""
+        item = self.get_by_tmdb_id(tmdb_id)
+        if not item:
+            return None
+
+        item.selected_seasons = json.dumps(selected_seasons) if selected_seasons is not None else None
+        self.db.commit()
+        self.db.refresh(item)
+        return item
 
     def remove(self, item_id: int) -> bool:
         """Remove item from watchlist."""

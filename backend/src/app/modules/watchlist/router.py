@@ -2,6 +2,7 @@
 import asyncio
 import json
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +11,10 @@ from app.config import settings
 from app.modules.discovery.tmdb_client import TMDBClient
 from .service import WatchlistService
 from .schemas import BatchProcessRequest, BatchProcessResponse, BatchDeleteRequest
+
+
+class UpdateSeasonsRequest(BaseModel):
+    selected_seasons: list[int] | None
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
@@ -168,6 +173,24 @@ async def delete_watchlist_items(
     """Delete multiple watchlist items by TMDB ID."""
     count = service.delete_batch(request.ids)
     return {"deleted": count}
+
+
+@router.patch("/{tmdb_id}/seasons")
+async def update_watchlist_seasons(
+    tmdb_id: int,
+    data: UpdateSeasonsRequest,
+    service: WatchlistService = Depends(get_service)
+):
+    """Update selected seasons for a watchlist item."""
+    item = service.update_seasons(tmdb_id, data.selected_seasons)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    selected_seasons = None
+    if item.selected_seasons:
+        selected_seasons = json.loads(item.selected_seasons)
+
+    return {"success": True, "selected_seasons": selected_seasons}
 
 
 # Parameterized endpoint must come AFTER specific endpoints
