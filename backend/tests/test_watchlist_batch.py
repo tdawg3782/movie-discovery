@@ -119,13 +119,13 @@ def test_batch_process_shows(mock_add_series, client):
     # Add items to watchlist
     client.post("/api/watchlist", json={
         "tmdb_id": 1399,
-        "media_type": "tv"
+        "media_type": "show"
     })
 
     # Process batch
     response = client.post("/api/watchlist/process", json={
         "ids": [1399],
-        "media_type": "tv"
+        "media_type": "show"
     })
     assert response.status_code == 200
     data = response.json()

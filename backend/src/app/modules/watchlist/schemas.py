@@ -7,7 +7,7 @@ class BatchProcessRequest(BaseModel):
     """Request to process multiple watchlist items."""
 
     ids: list[int]  # TMDB IDs
-    media_type: Literal["movie", "tv"]
+    media_type: Literal["movie", "show"]
 
 
 class BatchProcessResponse(BaseModel):
