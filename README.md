@@ -78,7 +78,7 @@ SONARR_API_KEY=your_key
 1. Browse trending on the **Discover** page
 2. Use **Filters** to narrow by genre, year, rating
 3. Click any poster to view details
-4. Click **+** to add to your watchlist
+4. Click **+** to add to your watchlist (TV shows prompt for season selection)
 
 ### Adding to Library
 

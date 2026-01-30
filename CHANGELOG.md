@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Library and queue API calls now run in parallel for faster response
 - Settings connection test uses correct setting lookup
 - Discover page now shows watchlist status for items
+- Batch process API now accepts 'show' media type (was incorrectly expecting 'tv')
+- Discover page now shows season selector when adding TV shows (was adding all seasons)
 
 ---
 
