@@ -43,12 +43,13 @@ async def test_add_series(client):
     """Add series with mocked lookup and post."""
     mock_lookup = [{"tvdbId": 456, "title": "Test Series", "year": 2024}]
     mock_folders = [{"path": "/tv"}]
+    mock_profiles = [{"id": 1}]
     mock_add = {"id": 1, "tvdbId": 456, "title": "Test Series"}
 
     with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
         with patch.object(client, "_post", new_callable=AsyncMock) as mock_post:
-            # First call is lookup_series, second is rootfolder
-            mock_get.side_effect = [mock_lookup, mock_folders]
+            # Calls: lookup_series, get_series_by_tvdb_id, rootfolder, qualityprofile
+            mock_get.side_effect = [mock_lookup, [], mock_folders, mock_profiles]
             mock_post.return_value = mock_add
             result = await client.add_series(tmdb_id=123)
 
@@ -77,8 +78,8 @@ async def test_add_series_no_root_folders(client):
     mock_lookup = [{"tvdbId": 456, "title": "Test Series", "year": 2024}]
 
     with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
-        # First call is lookup_series, second is rootfolder (empty)
-        mock_get.side_effect = [mock_lookup, []]
+        # Calls: lookup_series, get_series_by_tvdb_id, rootfolder (empty)
+        mock_get.side_effect = [mock_lookup, [], []]
         with pytest.raises(ValueError, match="No root folders configured in Sonarr"):
             await client.add_series(tmdb_id=123)
 

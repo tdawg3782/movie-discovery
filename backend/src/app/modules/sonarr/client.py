@@ -1,4 +1,5 @@
 """Sonarr API client."""
+import asyncio
 import httpx
 from typing import Any
 
@@ -53,8 +54,18 @@ class SonarrClient:
         tmdb_id: int,
         quality_profile_id: int | None = None,
         root_folder_path: str | None = None,
+        selected_seasons: list[int] | None = None,
     ) -> dict:
-        """Add series to Sonarr."""
+        """Add series to Sonarr.
+
+        Args:
+            tmdb_id: TMDB ID of the series to add
+            quality_profile_id: Quality profile ID (uses default if not specified)
+            root_folder_path: Root folder path (uses first configured if not specified)
+            selected_seasons: List of season numbers to monitor. If None, uses Sonarr
+                defaults. If provided, only these seasons are monitored (season 0/specials
+                are never auto-monitored regardless of selection).
+        """
         # Check if already in library
         series = await self.lookup_series(tmdb_id)
         if series and series.get("tvdbId"):
@@ -77,6 +88,16 @@ class SonarrClient:
             if not profiles:
                 raise ValueError("No quality profiles configured in Sonarr")
             quality_profile_id = profiles[0]["id"]
+
+        # Apply season selection if provided
+        if selected_seasons is not None and "seasons" in series:
+            for season in series["seasons"]:
+                season_num = season.get("seasonNumber", 0)
+                # Season 0 (specials) are never auto-monitored
+                if season_num == 0:
+                    season["monitored"] = False
+                else:
+                    season["monitored"] = season_num in selected_seasons
 
         series["qualityProfileId"] = quality_profile_id
         series["rootFolderPath"] = root_folder_path
@@ -128,21 +149,17 @@ class SonarrClient:
                     tvdb_to_status[tvdb_id] = "added"
 
         # For each requested TMDB ID, we need to find its TVDB ID
-        # This requires looking up each one, but we can cache results
-        results = {}
-        for tmdb_id in tmdb_ids:
-            # Look up series to get TVDB ID
+        # Run all lookups concurrently for speed
+        async def lookup_single(tmdb_id: int) -> tuple[int, str | None]:
             series = await self.lookup_series(tmdb_id)
             if series:
                 tvdb_id = series.get("tvdbId")
                 if tvdb_id and tvdb_id in tvdb_to_status:
-                    results[tmdb_id] = tvdb_to_status[tvdb_id]
-                else:
-                    results[tmdb_id] = None
-            else:
-                results[tmdb_id] = None
+                    return (tmdb_id, tvdb_to_status[tvdb_id])
+            return (tmdb_id, None)
 
-        return results
+        lookups = await asyncio.gather(*[lookup_single(tid) for tid in tmdb_ids])
+        return dict(lookups)
 
     async def get_queue(self) -> dict:
         """Get current download queue from Sonarr."""
