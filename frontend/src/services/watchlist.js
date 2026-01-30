@@ -3,10 +3,24 @@ import api from './api'
 export const watchlistService = {
   getAll: () => api.get('/watchlist'),
 
-  add: (tmdbId, mediaType, notes = null) =>
-    api.post('/watchlist', { tmdb_id: tmdbId, media_type: mediaType, notes }),
+  add: (tmdbId, mediaType, notes = null, selectedSeasons = null) =>
+    api.post('/watchlist', {
+      tmdb_id: tmdbId,
+      media_type: mediaType,
+      notes,
+      selected_seasons: selectedSeasons
+    }),
 
   remove: (id) => api.delete(`/watchlist/${id}`),
+
+  /**
+   * Update selected seasons for a TV show in watchlist
+   * @param {number} tmdbId - TMDB ID of the TV show
+   * @param {number[]} selectedSeasons - Array of season numbers to monitor
+   * @returns {Promise<WatchlistItem>}
+   */
+  updateSeasons: (tmdbId, selectedSeasons) =>
+    api.patch(`/watchlist/${tmdbId}/seasons`, { selected_seasons: selectedSeasons }),
 
   /**
    * Process watchlist items (send to Radarr/Sonarr)
