@@ -53,8 +53,13 @@
             >
               &#x25B6; Watch Trailer
             </button>
-            <button class="btn-add" @click="addToWatchlist">
-              + Add to Watchlist
+            <button
+              class="btn-add"
+              :class="{ added: addedToWatchlist }"
+              :disabled="addingToWatchlist || addedToWatchlist"
+              @click="addToWatchlist"
+            >
+              {{ addedToWatchlist ? '✓ Added' : addingToWatchlist ? 'Adding...' : '+ Add to Watchlist' }}
             </button>
           </div>
         </div>
@@ -82,6 +87,14 @@
       :videos="media.videos?.results || []"
       @close="showTrailer = false"
     />
+
+    <!-- Season Select Modal (TV shows only) -->
+    <SeasonSelectModal
+      :is-open="showSeasonModal"
+      :show="media"
+      @close="showSeasonModal = false"
+      @add="handleAddWithSeasons"
+    />
   </div>
 
   <div v-else-if="loading" class="loading">
@@ -97,14 +110,19 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import discoverService from '@/services/discover'
+import { watchlistService } from '@/services/watchlist'
 import CastCarousel from '@/components/CastCarousel.vue'
 import MediaCarousel from '@/components/MediaCarousel.vue'
 import TrailerModal from '@/components/TrailerModal.vue'
+import SeasonSelectModal from '@/components/SeasonSelectModal.vue'
 
 const route = useRoute()
 const media = ref(null)
 const loading = ref(true)
 const showTrailer = ref(false)
+const showSeasonModal = ref(false)
+const addingToWatchlist = ref(false)
+const addedToWatchlist = ref(false)
 
 const mediaType = computed(() => route.meta.mediaType || 'movie')
 const mediaId = computed(() => route.params.id)
@@ -148,6 +166,7 @@ onMounted(async () => {
 })
 
 watch(() => route.params.id, async () => {
+  addedToWatchlist.value = false
   await fetchMedia()
 })
 
@@ -169,8 +188,37 @@ async function fetchMedia() {
 }
 
 async function addToWatchlist() {
-  // TODO: Integrate with watchlist service
-  console.log('Add to watchlist:', mediaId.value)
+  if (addingToWatchlist.value || addedToWatchlist.value) return
+
+  // For TV shows, open season selector modal
+  if (mediaType.value === 'tv') {
+    showSeasonModal.value = true
+    return
+  }
+
+  // For movies, add directly
+  addingToWatchlist.value = true
+  try {
+    await watchlistService.add(mediaId.value, 'movie')
+    addedToWatchlist.value = true
+  } catch (error) {
+    console.error('Failed to add to watchlist:', error)
+  } finally {
+    addingToWatchlist.value = false
+  }
+}
+
+async function handleAddWithSeasons(selectedSeasons) {
+  addingToWatchlist.value = true
+  try {
+    await watchlistService.add(mediaId.value, 'show', null, selectedSeasons)
+    addedToWatchlist.value = true
+    showSeasonModal.value = false
+  } catch (error) {
+    console.error('Failed to add to watchlist:', error)
+  } finally {
+    addingToWatchlist.value = false
+  }
 }
 </script>
 
