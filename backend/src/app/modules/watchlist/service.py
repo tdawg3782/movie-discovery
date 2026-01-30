@@ -102,8 +102,14 @@ class WatchlistService:
                     client = RadarrClient(settings.radarr_url, settings.radarr_api_key)
                     await client.add_movie(tmdb_id)
                 else:
+                    # Get watchlist item to retrieve selected seasons
+                    item = self.get_by_tmdb_id(tmdb_id)
+                    selected_seasons = None
+                    if item and item.selected_seasons:
+                        selected_seasons = json.loads(item.selected_seasons)
+
                     client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
-                    await client.add_series(tmdb_id)
+                    await client.add_series(tmdb_id, selected_seasons=selected_seasons)
 
                 processed.append(tmdb_id)
 
