@@ -10,7 +10,7 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 | **Search** | Find any movie or TV show |
 | **Detail Pages** | View trailers, cast, recommendations, collections |
 | **Person Pages** | Browse actor/director filmographies |
-| **Watchlist** | Stage items before adding to library (batch processing) |
+| **Watchlist** | Stage items before adding to library (batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
 | **Settings** | Configure API keys via UI |
 
@@ -83,9 +83,10 @@ SONARR_API_KEY=your_key
 ### Adding to Library
 
 1. Go to **Watchlist**
-2. Select items with checkboxes
-3. Click **Add to Library**
-4. Confirm in the modal
+2. For TV shows: click row to expand and select specific seasons
+3. Select items with checkboxes
+4. Click **Add to Library**
+5. Confirm in the modal (selected seasons sent to Sonarr)
 
 ### Monitoring Downloads
 
@@ -156,9 +157,10 @@ movie_discovery/
 ### Watchlist
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/watchlist` | List items |
-| POST | `/api/watchlist` | Add item |
+| GET | `/api/watchlist` | List items (includes season info) |
+| POST | `/api/watchlist` | Add item (with optional selected_seasons) |
 | DELETE | `/api/watchlist/{id}` | Remove item |
+| PATCH | `/api/watchlist/{tmdb_id}/seasons` | Update selected seasons |
 | POST | `/api/watchlist/process` | Batch add to library |
 | DELETE | `/api/watchlist/batch` | Batch delete |
 

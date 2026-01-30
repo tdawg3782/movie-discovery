@@ -15,20 +15,20 @@
 backend/src/app/
 ├── modules/
 │   ├── discovery/    # TMDB: trending, search, filters, details, person, collection
-│   ├── watchlist/    # CRUD, batch process, batch delete
+│   ├── watchlist/    # CRUD, batch process, batch delete, season selection
 │   ├── radarr/       # Movie library: status, add, queue, recent
-│   ├── sonarr/       # TV library: status, add, queue, recent
+│   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring
 │   ├── settings/     # API key management (encrypted storage)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
-├── models.py         # SQLAlchemy: Settings, Watchlist, MediaCache
+├── models.py         # SQLAlchemy: Settings, Watchlist (with selected_seasons), MediaCache
 └── main.py           # FastAPI app
 
 frontend/src/
 ├── views/            # DiscoverView, WatchlistView, LibraryView, SettingsView,
 │                     # MediaDetailView, PersonView, CollectionView
 ├── components/       # FilterPanel, TrailerModal, CastCarousel, MediaCarousel,
-│                     # QueueItem, DownloadProgress, StatusBadge
+│                     # QueueItem, DownloadProgress, StatusBadge, SeasonSelectModal
 ├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js
 └── router/           # Vue Router config
 ```
@@ -38,10 +38,10 @@ frontend/src/
 | File | Purpose |
 |------|---------|
 | `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls |
-| `backend/src/app/modules/discovery/router.py` | Discovery + detail endpoints |
-| `backend/src/app/modules/settings/service.py` | Encrypted settings storage |
-| `frontend/src/views/DiscoverView.vue` | Main page with filters |
-| `frontend/src/components/FilterPanel.vue` | Genre/year/rating filters |
+| `backend/src/app/modules/watchlist/service.py` | Watchlist CRUD + season storage |
+| `backend/src/app/modules/sonarr/client.py` | Sonarr API with season monitoring |
+| `frontend/src/components/SeasonSelectModal.vue` | TV show season picker |
+| `frontend/src/views/WatchlistView.vue` | Expandable season editing |
 
 ## Code Style
 
@@ -69,28 +69,16 @@ SONARR_API_KEY=xxx
 
 Settings can also be configured via UI at `/settings`.
 
-## Routes
-
-| Path | View |
-|------|------|
-| `/` | DiscoverView (trending + filters) |
-| `/watchlist` | WatchlistView (staging queue) |
-| `/library` | LibraryView (recent + downloads) |
-| `/settings` | SettingsView (API keys) |
-| `/movie/:id` | MediaDetailView |
-| `/tv/:id` | MediaDetailView |
-| `/person/:id` | PersonView |
-| `/collection/:id` | CollectionView |
-
 ## Workflow
 
-1. **Add to Watchlist** - Click "+" on any poster
-2. **Review in Watchlist** - Select items, batch process
-3. **Monitor in Library** - See downloads and recent additions
+1. **Add to Watchlist** - Click "+" on any poster (TV shows open season selector)
+2. **Review in Watchlist** - Select items, expand TV shows to edit seasons
+3. **Batch Process** - Send to Radarr/Sonarr with season selection
+4. **Monitor in Library** - See downloads and recent additions
 
 ## Testing
 
-Run tests before committing backend changes:
+IMPORTANT: Run tests before committing backend changes:
 ```bash
 cd backend && pytest -v
 ```

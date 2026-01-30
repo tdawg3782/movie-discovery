@@ -5,6 +5,41 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-01-30
+
+### Added
+
+- **Season Selection for TV Shows**
+  - Select specific seasons when adding TV shows to watchlist
+  - SeasonSelectModal opens automatically for TV shows
+  - Expandable rows in WatchlistView to edit seasons
+  - "X of Y seasons" summary display
+  - Selected seasons passed to Sonarr when processing
+
+- **Watchlist Season API**
+  - `PATCH /api/watchlist/{tmdb_id}/seasons` - Update selected seasons
+  - `selected_seasons` field in watchlist add/list endpoints
+  - `total_seasons` included in watchlist item responses
+
+- **Sonarr Season Monitoring**
+  - Per-season monitoring based on user selection
+  - Season 0 (specials) never auto-monitored
+  - Backward compatible (null = all seasons)
+
+### Changed
+
+- TV shows now open season selector modal instead of adding directly
+- WatchlistView shows expandable season editor for TV shows
+- API timeout increased to 30 seconds
+
+### Fixed
+
+- Library and queue API calls now run in parallel for faster response
+- Settings connection test uses correct setting lookup
+- Discover page now shows watchlist status for items
+
+---
+
 ## [2.0.0] - 2026-01-29
 
 ### Added
