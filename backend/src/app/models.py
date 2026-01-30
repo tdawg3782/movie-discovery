@@ -44,6 +44,8 @@ class Watchlist(Base):
     added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, added, downloading
+    selected_seasons: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # JSON array like "[1, 2, 3]" or null for all seasons
 
     __table_args__ = (
         {"sqlite_autoincrement": True},
