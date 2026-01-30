@@ -59,6 +59,15 @@
     <div v-if="!loading && items.length > 0 && currentPage < totalPages" class="load-more">
       <button @click="loadNextPage">Load More</button>
     </div>
+
+    <!-- Season Select Modal for TV shows -->
+    <SeasonSelectModal
+      v-if="selectedShow"
+      :is-open="showSeasonModal"
+      :show="selectedShow"
+      @close="closeSeasonModal"
+      @add="handleAddWithSeasons"
+    />
   </div>
 </template>
 
@@ -66,6 +75,7 @@
 import { ref, reactive, watch, onMounted } from 'vue'
 import MediaCard from '../components/MediaCard.vue'
 import FilterPanel from '../components/FilterPanel.vue'
+import SeasonSelectModal from '../components/SeasonSelectModal.vue'
 import { discoverService } from '../services/discover'
 import { libraryService } from '../services/library'
 import { watchlistService } from '../services/watchlist'
@@ -78,6 +88,11 @@ const searchQuery = ref('')
 const isSearching = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+// Season selection modal state
+const showSeasonModal = ref(false)
+const selectedShow = ref(null)
+const pendingMedia = ref(null)
 const isFiltering = ref(false)
 
 const filters = reactive({
@@ -226,19 +241,56 @@ const loadNextPage = () => {
 }
 
 const handleAdd = async (media) => {
-  try {
-    // Add to watchlist instead of directly to Radarr/Sonarr
-    const mediaType = media.media_type || (activeTab.value === 'movies' ? 'movie' : 'show')
-    await watchlistService.add(media.tmdb_id, mediaType)
+  const mediaType = media.media_type || (activeTab.value === 'movies' ? 'movie' : 'show')
 
-    // Update local state to show item is in watchlist
-    const index = items.value.findIndex(item => item.tmdb_id === media.tmdb_id && item.media_type === media.media_type)
-    if (index !== -1) {
-      items.value[index] = { ...items.value[index], library_status: 'watchlist' }
+  // For TV shows, fetch details and show season selector
+  if (mediaType === 'show') {
+    try {
+      pendingMedia.value = media
+      // Fetch show details to get seasons
+      const details = await discoverService.getShowDetail(media.tmdb_id)
+      selectedShow.value = details
+      showSeasonModal.value = true
+    } catch (err) {
+      console.error('Failed to fetch show details:', err)
+      alert('Failed to load show details')
     }
+    return
+  }
+
+  // For movies, add directly
+  try {
+    await watchlistService.add(media.tmdb_id, mediaType)
+    updateItemStatus(media, 'watchlist')
   } catch (err) {
     console.error('Failed to add to watchlist:', err)
     alert(err.response?.data?.detail || 'Failed to add to watchlist')
+  }
+}
+
+const handleAddWithSeasons = async (selectedSeasons) => {
+  if (!pendingMedia.value) return
+
+  try {
+    await watchlistService.add(pendingMedia.value.tmdb_id, 'show', null, selectedSeasons)
+    updateItemStatus(pendingMedia.value, 'watchlist')
+    closeSeasonModal()
+  } catch (err) {
+    console.error('Failed to add to watchlist:', err)
+    alert(err.response?.data?.detail || 'Failed to add to watchlist')
+  }
+}
+
+const closeSeasonModal = () => {
+  showSeasonModal.value = false
+  selectedShow.value = null
+  pendingMedia.value = null
+}
+
+const updateItemStatus = (media, status) => {
+  const index = items.value.findIndex(item => item.tmdb_id === media.tmdb_id && item.media_type === media.media_type)
+  if (index !== -1) {
+    items.value[index] = { ...items.value[index], library_status: status }
   }
 }
 
