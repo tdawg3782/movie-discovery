@@ -1,4 +1,5 @@
 """Watchlist business logic."""
+import json
 from sqlalchemy.orm import Session
 
 from app.models import Watchlist
@@ -13,7 +14,13 @@ class WatchlistService:
     def __init__(self, db: Session):
         self.db = db
 
-    def add(self, tmdb_id: int, media_type: str, notes: str | None = None) -> Watchlist:
+    def add(
+        self,
+        tmdb_id: int,
+        media_type: str,
+        notes: str | None = None,
+        selected_seasons: list[int] | None = None
+    ) -> Watchlist:
         """Add item to watchlist. Returns existing if duplicate."""
         existing = (
             self.db.query(Watchlist)
@@ -23,7 +30,15 @@ class WatchlistService:
         if existing:
             return existing
 
-        item = Watchlist(tmdb_id=tmdb_id, media_type=media_type, notes=notes)
+        # Convert seasons list to JSON string for storage
+        seasons_json = json.dumps(selected_seasons) if selected_seasons else None
+
+        item = Watchlist(
+            tmdb_id=tmdb_id,
+            media_type=media_type,
+            notes=notes,
+            selected_seasons=seasons_json
+        )
         self.db.add(item)
         self.db.commit()
         self.db.refresh(item)

@@ -49,3 +49,15 @@ def test_duplicate_add_returns_existing(service):
     item1 = service.add(tmdb_id=123, media_type="movie")
     item2 = service.add(tmdb_id=123, media_type="movie")
     assert item1.id == item2.id
+
+
+def test_add_with_selected_seasons(service):
+    """Service stores selected_seasons as JSON."""
+    item = service.add(tmdb_id=12345, media_type="show", selected_seasons=[1, 2, 3])
+    assert item.selected_seasons == "[1, 2, 3]"
+
+
+def test_add_without_seasons_stores_null(service):
+    """Service stores None when no seasons specified."""
+    item = service.add(tmdb_id=12345, media_type="show")
+    assert item.selected_seasons is None
