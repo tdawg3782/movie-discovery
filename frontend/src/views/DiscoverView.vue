@@ -97,17 +97,27 @@ const fetchLibraryStatuses = async (mediaItems) => {
     const movieIds = mediaItems.filter(m => m.media_type === 'movie').map(m => m.tmdb_id)
     const showIds = mediaItems.filter(m => m.media_type === 'show').map(m => m.tmdb_id)
 
-    // Fetch statuses in parallel
-    const [movieStatuses, showStatuses] = await Promise.all([
+    // Fetch library statuses and watchlist in parallel
+    const [movieStatuses, showStatuses, watchlistData] = await Promise.all([
       movieIds.length ? libraryService.getBatchMovieStatus(movieIds) : Promise.resolve({ statuses: {} }),
       showIds.length ? libraryService.getBatchShowStatus(showIds) : Promise.resolve({ statuses: {} }),
+      watchlistService.getAll().catch(() => ({ items: [] })),
     ])
 
-    // Merge statuses into items
+    // Build set of watchlist TMDB IDs
+    const watchlistIds = new Set(watchlistData.items.map(w => w.tmdb_id))
+
+    // Merge statuses into items (library status takes priority over watchlist)
     items.value = items.value.map(item => {
       const statuses = item.media_type === 'movie' ? movieStatuses.statuses : showStatuses.statuses
-      const status = statuses[item.tmdb_id]
-      return status ? { ...item, library_status: status } : item
+      const libraryStatus = statuses[item.tmdb_id]
+      if (libraryStatus) {
+        return { ...item, library_status: libraryStatus }
+      }
+      if (watchlistIds.has(item.tmdb_id)) {
+        return { ...item, library_status: 'watchlist' }
+      }
+      return item
     })
   } catch (err) {
     // Don't fail the whole view if status check fails

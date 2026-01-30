@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 import httpx
 
 from app.database import get_db
+from app.config import get_setting
 from app.modules.settings.service import SettingsService
 from app.modules.settings.schemas import (
     SettingsUpdate,
@@ -36,7 +37,7 @@ async def test_connection(request: ConnectionTestRequest, db: Session = Depends(
     service = SettingsService(db)
 
     if request.service == "tmdb":
-        api_key = service.get_raw_value("tmdb_api_key")
+        api_key = get_setting("tmdb_api_key")
         if not api_key:
             return ConnectionTestResponse(success=False, message="TMDB API key not configured")
         try:
@@ -51,8 +52,8 @@ async def test_connection(request: ConnectionTestRequest, db: Session = Depends(
             return ConnectionTestResponse(success=False, message=f"Connection failed: {str(e)}")
 
     elif request.service == "radarr":
-        url = service.get_raw_value("radarr_url")
-        api_key = service.get_raw_value("radarr_api_key")
+        url = get_setting("radarr_url")
+        api_key = get_setting("radarr_api_key")
         if not url or not api_key:
             return ConnectionTestResponse(success=False, message="Radarr not configured")
         try:
@@ -68,8 +69,8 @@ async def test_connection(request: ConnectionTestRequest, db: Session = Depends(
             return ConnectionTestResponse(success=False, message=f"Connection failed: {str(e)}")
 
     elif request.service == "sonarr":
-        url = service.get_raw_value("sonarr_url")
-        api_key = service.get_raw_value("sonarr_api_key")
+        url = get_setting("sonarr_url")
+        api_key = get_setting("sonarr_api_key")
         if not url or not api_key:
             return ConnectionTestResponse(success=False, message="Sonarr not configured")
         try:

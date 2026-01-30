@@ -1,4 +1,5 @@
 """Library API routes for combined Radarr/Sonarr data."""
+import asyncio
 from fastapi import APIRouter, Depends, Query
 
 from app.config import settings
@@ -26,8 +27,11 @@ async def get_library_activity(
     sonarr: SonarrClient = Depends(get_sonarr_client)
 ):
     """Get combined recent activity from Radarr and Sonarr."""
-    movies = await radarr.get_recent(limit)
-    shows = await sonarr.get_recent(limit)
+    # Run both calls in parallel for faster response
+    movies, shows = await asyncio.gather(
+        radarr.get_recent(limit),
+        sonarr.get_recent(limit),
+    )
 
     return {
         "movies": movies,
@@ -41,8 +45,11 @@ async def get_combined_queue(
     sonarr: SonarrClient = Depends(get_sonarr_client)
 ):
     """Get combined download queue from Radarr and Sonarr."""
-    radarr_queue = await radarr.get_queue()
-    sonarr_queue = await sonarr.get_queue()
+    # Run both calls in parallel for faster response
+    radarr_queue, sonarr_queue = await asyncio.gather(
+        radarr.get_queue(),
+        sonarr.get_queue(),
+    )
 
     return {
         "movies": radarr_queue.get("records", []),
