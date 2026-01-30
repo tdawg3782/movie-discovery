@@ -181,6 +181,76 @@ movie_discovery/
 | PUT | `/api/settings` | Update settings |
 | POST | `/api/settings/test` | Test connection |
 
+## Docker Deployment (Synology NAS)
+
+Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
+
+### Prerequisites
+
+- Synology NAS with Container Manager or Docker
+- Domain name (for Cloudflare Tunnel)
+- Cloudflare account (free tier works)
+
+### Setup
+
+1. **Create Cloudflare Tunnel**
+   - Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → Networks → Tunnels
+   - Create tunnel, copy the token
+   - Configure public hostname pointing to `frontend:80`
+
+2. **Copy files to NAS**
+   ```
+   /docker/hoveyflix/
+   ├── backend/
+   ├── frontend/
+   ├── data/
+   ├── docker-compose.yml
+   ├── .dockerignore
+   └── .env
+   ```
+
+3. **Configure environment**
+   ```bash
+   # .env on NAS
+   TMDB_API_KEY=your_key
+   RADARR_URL=http://192.168.x.x:7878    # Use NAS IP, not localhost
+   RADARR_API_KEY=your_key
+   SONARR_URL=http://192.168.x.x:8989
+   SONARR_API_KEY=your_key
+   CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+   ```
+
+4. **Deploy via SSH**
+   ```bash
+   ssh user@nas-ip
+   cd /volume1/docker/hoveyflix
+   sudo docker-compose up -d --build
+   ```
+
+5. **Verify**
+   - Check tunnel status in Cloudflare dashboard
+   - Visit your domain (e.g., `movies.yourdomain.com`)
+
+### Docker Commands
+
+| Task | Command |
+|------|---------|
+| Start | `sudo docker-compose up -d` |
+| Stop | `sudo docker-compose down` |
+| Rebuild | `sudo docker-compose up -d --build` |
+| View logs | `sudo docker logs hoveyflix-backend` |
+| Restart | `sudo docker-compose restart` |
+
+### Architecture
+
+```
+Internet → Cloudflare → Tunnel → frontend:80 (nginx)
+                                      ↓
+                               backend:8000 (FastAPI)
+                                      ↓
+                            Radarr/Sonarr (local network)
+```
+
 ## Development
 
 ### Running Tests

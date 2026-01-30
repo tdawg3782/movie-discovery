@@ -4,10 +4,25 @@
 
 | Command | Description |
 |---------|-------------|
-| `start.bat` | Start backend + frontend |
+| `start.bat` | Start backend + frontend (local dev) |
 | `stop.bat` | Stop all servers |
 | `cd backend && pytest -v` | Run tests |
 | `cd backend && pytest --cov=app` | Tests with coverage |
+
+## Docker Deployment
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Orchestrates backend, frontend, cloudflared |
+| `backend/Dockerfile` | Python 3.11 + FastAPI |
+| `frontend/Dockerfile` | Node build + nginx |
+| `frontend/nginx.conf` | Reverse proxy /api to backend |
+
+Deploy to NAS:
+```bash
+cd /volume1/docker/hoveyflix
+sudo docker-compose up -d --build
+```
 
 ## Project Structure
 

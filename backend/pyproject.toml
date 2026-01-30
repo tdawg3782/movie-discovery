@@ -1,6 +1,6 @@
 [project]
 name = "movie-discovery"
-version = "0.1.0"
+version = "2.2.0"
 description = "Movie and TV show discovery with Sonarr/Radarr integration"
 requires-python = ">=3.11"
 dependencies = [

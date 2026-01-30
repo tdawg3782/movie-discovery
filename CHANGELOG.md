@@ -5,6 +5,33 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-30
+
+### Added
+
+- **Docker Deployment**
+  - Dockerfile for backend (Python 3.11, FastAPI, uvicorn)
+  - Dockerfile for frontend (Node build + nginx)
+  - docker-compose.yml with three services: backend, frontend, cloudflared
+  - nginx.conf for reverse proxy to backend API
+  - .dockerignore to exclude unnecessary files from builds
+
+- **Cloudflare Tunnel Integration**
+  - Secure remote access without port forwarding
+  - CLOUDFLARE_TUNNEL_TOKEN environment variable
+  - Auto-restart on NAS reboot
+
+- **NAS Deployment Documentation**
+  - Step-by-step Synology deployment guide in README
+  - Docker commands reference table
+  - Architecture diagram
+
+### Changed
+
+- Added `cryptography` dependency for settings encryption in Docker builds
+
+---
+
 ## [2.1.0] - 2026-01-30
 
 ### Added
