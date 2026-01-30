@@ -67,61 +67,115 @@
         <div
           v-for="item in filteredItems"
           :key="item.id"
-          :class="['watchlist-item', { selected: isSelected(item.tmdb_id) }]"
+          :class="['watchlist-item-wrapper', { expanded: isExpanded(item.tmdb_id) }]"
         >
-          <div class="item-checkbox">
-            <input
-              type="checkbox"
-              :checked="isSelected(item.tmdb_id)"
-              @change="toggleSelect(item)"
-            />
-          </div>
-
-          <router-link
-            :to="`/${item.media_type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}`"
-            class="item-poster"
+          <div
+            :class="['watchlist-item', { selected: isSelected(item.tmdb_id), expandable: item.media_type === 'show' }]"
+            @click="toggleExpand(item)"
           >
-            <img
-              v-if="item.poster_path"
-              :src="`https://image.tmdb.org/t/p/w185${item.poster_path}`"
-              :alt="item.title"
-            />
-            <div v-else class="no-poster">?</div>
-          </router-link>
+            <div class="item-checkbox" @click.stop>
+              <input
+                type="checkbox"
+                :checked="isSelected(item.tmdb_id)"
+                @change="toggleSelect(item)"
+              />
+            </div>
 
-          <div class="item-info">
             <router-link
               :to="`/${item.media_type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}`"
-              class="item-title"
+              class="item-poster"
+              @click.stop
             >
-              {{ item.title }}
+              <img
+                v-if="item.poster_path"
+                :src="`https://image.tmdb.org/t/p/w185${item.poster_path}`"
+                :alt="item.title"
+              />
+              <div v-else class="no-poster">?</div>
             </router-link>
-            <div class="item-meta">
-              <span class="media-type">{{ item.media_type === 'movie' ? 'Movie' : 'TV Show' }}</span>
-              <span :class="['status-badge', item.status]">{{ formatStatus(item.status) }}</span>
+
+            <div class="item-info">
+              <router-link
+                :to="`/${item.media_type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}`"
+                class="item-title"
+                @click.stop
+              >
+                {{ item.title }}
+              </router-link>
+              <div class="item-meta">
+                <span class="media-type">{{ item.media_type === 'movie' ? 'Movie' : 'TV Show' }}</span>
+                <span :class="['status-badge', item.status]">{{ formatStatus(item.status) }}</span>
+                <span v-if="item.media_type === 'show' && item.total_seasons" class="seasons-summary">
+                  {{ formatSeasonsSummary(item) }}
+                </span>
+              </div>
+              <div v-if="item.notes" class="item-notes">{{ item.notes }}</div>
+              <div class="item-date">Added {{ formatDate(item.added_at) }}</div>
             </div>
-            <div v-if="item.notes" class="item-notes">{{ item.notes }}</div>
-            <div class="item-date">Added {{ formatDate(item.added_at) }}</div>
+
+            <div class="item-actions" @click.stop>
+              <button
+                v-if="item.media_type === 'show'"
+                class="btn-expand"
+                @click.stop="toggleExpand(item)"
+                :title="isExpanded(item.tmdb_id) ? 'Collapse' : 'Edit Seasons'"
+              >
+                <span :class="['expand-icon', { rotated: isExpanded(item.tmdb_id) }]">&#9660;</span>
+              </button>
+              <button
+                v-if="item.status === 'pending'"
+                class="btn-add-single"
+                @click="processSingle(item)"
+                :disabled="processing"
+                title="Add to Library"
+              >
+                +
+              </button>
+              <button
+                class="btn-remove-single"
+                @click="removeSingle(item.id)"
+                :disabled="removing === item.id"
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
-          <div class="item-actions">
-            <button
-              v-if="item.status === 'pending'"
-              class="btn-add-single"
-              @click="processSingle(item)"
-              :disabled="processing"
-              title="Add to Library"
-            >
-              +
-            </button>
-            <button
-              class="btn-remove-single"
-              @click="removeSingle(item.id)"
-              :disabled="removing === item.id"
-              title="Remove"
-            >
-              ×
-            </button>
+          <!-- Expanded Season Selection -->
+          <div v-if="item.media_type === 'show' && isExpanded(item.tmdb_id)" class="season-selector">
+            <div class="season-selector-header">
+              <span class="season-selector-title">Select Seasons to Monitor</span>
+              <button
+                class="btn-select-all-seasons"
+                @click="toggleAllSeasons(item)"
+              >
+                {{ areAllSeasonsSelected(item) ? 'Deselect All' : 'Select All' }}
+              </button>
+            </div>
+            <div class="season-checkboxes">
+              <label
+                v-for="season in item.total_seasons"
+                :key="season"
+                class="season-checkbox"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isSeasonSelected(item, season)"
+                  @change="toggleSeason(item, season)"
+                />
+                <span class="season-label">Season {{ season }}</span>
+              </label>
+            </div>
+            <div class="season-selector-actions">
+              <button
+                class="btn-save-seasons"
+                @click="saveSeasons(item)"
+                :disabled="savingSeasons"
+              >
+                {{ savingSeasons ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -184,6 +238,12 @@ const filter = ref('all')
 const showProcessModal = ref(false)
 const processResult = ref(null)
 
+// Expandable row state for TV shows
+const expandedItem = ref(null)
+const savingSeasons = ref(false)
+// Local state for pending season changes (keyed by tmdb_id)
+const pendingSeasonChanges = ref({})
+
 onMounted(() => {
   fetchWatchlist()
 })
@@ -208,7 +268,7 @@ const filteredItems = computed(() => {
     return items.value.filter(i => i.media_type === 'movie')
   }
   if (filter.value === 'shows') {
-    return items.value.filter(i => i.media_type === 'tv')
+    return items.value.filter(i => i.media_type === 'show')
   }
   return items.value
 })
@@ -218,7 +278,7 @@ const movieCount = computed(() =>
 )
 
 const showCount = computed(() =>
-  items.value.filter(i => i.media_type === 'tv').length
+  items.value.filter(i => i.media_type === 'show').length
 )
 
 const allSelected = computed(() =>
@@ -234,7 +294,7 @@ const selectedMovieIds = computed(() =>
 
 const selectedShowIds = computed(() =>
   selectedItems.value
-    .filter(s => s.media_type === 'tv')
+    .filter(s => s.media_type === 'show')
     .map(s => s.tmdb_id)
 )
 
@@ -354,6 +414,107 @@ function formatStatus(status) {
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString()
+}
+
+// Expandable row functions for TV shows
+function toggleExpand(item) {
+  if (item.media_type !== 'show') return
+  if (expandedItem.value === item.tmdb_id) {
+    expandedItem.value = null
+  } else {
+    expandedItem.value = item.tmdb_id
+    // Initialize pending changes with current selection
+    if (!pendingSeasonChanges.value[item.tmdb_id]) {
+      pendingSeasonChanges.value[item.tmdb_id] = item.selected_seasons
+        ? [...item.selected_seasons]
+        : Array.from({ length: item.total_seasons }, (_, i) => i + 1)
+    }
+  }
+}
+
+function isExpanded(tmdbId) {
+  return expandedItem.value === tmdbId
+}
+
+function getSelectedSeasons(item) {
+  // Return pending changes if they exist, otherwise the item's current selection
+  if (pendingSeasonChanges.value[item.tmdb_id]) {
+    return pendingSeasonChanges.value[item.tmdb_id]
+  }
+  return item.selected_seasons || Array.from({ length: item.total_seasons }, (_, i) => i + 1)
+}
+
+function isSeasonSelected(item, season) {
+  const selected = getSelectedSeasons(item)
+  return selected.includes(season)
+}
+
+function toggleSeason(item, season) {
+  const tmdbId = item.tmdb_id
+  if (!pendingSeasonChanges.value[tmdbId]) {
+    pendingSeasonChanges.value[tmdbId] = item.selected_seasons
+      ? [...item.selected_seasons]
+      : Array.from({ length: item.total_seasons }, (_, i) => i + 1)
+  }
+
+  const selected = pendingSeasonChanges.value[tmdbId]
+  const index = selected.indexOf(season)
+  if (index === -1) {
+    selected.push(season)
+    selected.sort((a, b) => a - b)
+  } else {
+    selected.splice(index, 1)
+  }
+}
+
+function areAllSeasonsSelected(item) {
+  const selected = getSelectedSeasons(item)
+  return selected.length === item.total_seasons
+}
+
+function toggleAllSeasons(item) {
+  const tmdbId = item.tmdb_id
+  if (areAllSeasonsSelected(item)) {
+    // Deselect all - but keep at least season 1
+    pendingSeasonChanges.value[tmdbId] = [1]
+  } else {
+    // Select all
+    pendingSeasonChanges.value[tmdbId] = Array.from({ length: item.total_seasons }, (_, i) => i + 1)
+  }
+}
+
+async function saveSeasons(item) {
+  const tmdbId = item.tmdb_id
+  const selectedSeasons = pendingSeasonChanges.value[tmdbId]
+
+  if (!selectedSeasons || selectedSeasons.length === 0) {
+    alert('Please select at least one season')
+    return
+  }
+
+  savingSeasons.value = true
+  try {
+    await watchlistService.updateSeasons(tmdbId, selectedSeasons)
+    await fetchWatchlist()
+    // Clear pending changes after successful save
+    delete pendingSeasonChanges.value[tmdbId]
+  } catch (err) {
+    console.error('Failed to update seasons:', err)
+    alert(err.response?.data?.detail || 'Failed to update seasons')
+  } finally {
+    savingSeasons.value = false
+  }
+}
+
+function formatSeasonsSummary(item) {
+  const selected = item.selected_seasons || []
+  const total = item.total_seasons || 0
+
+  if (total === 0) return ''
+  if (selected.length === 0 || selected.length === total) {
+    return 'All seasons'
+  }
+  return `${selected.length} of ${total} seasons`
 }
 </script>
 
@@ -750,5 +911,200 @@ function formatDate(dateStr) {
   margin: 8px 0 0 20px;
   padding: 0;
   font-size: 12px;
+}
+
+/* Expandable Row Styles */
+.watchlist-item-wrapper {
+  background: #1a1a2e;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  overflow: hidden;
+}
+
+.watchlist-item-wrapper.expanded {
+  border-color: #252540;
+}
+
+.watchlist-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #1a1a2e;
+  transition: background-color 0.2s;
+}
+
+.watchlist-item.expandable {
+  cursor: pointer;
+}
+
+.watchlist-item.expandable:hover {
+  background: #252540;
+}
+
+.watchlist-item.selected {
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.watchlist-item-wrapper:has(.watchlist-item.selected) {
+  border-color: #e94560;
+}
+
+.btn-expand {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #888;
+}
+
+.btn-expand:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.expand-icon {
+  font-size: 10px;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.expand-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.seasons-summary {
+  font-size: 12px;
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Season Selector Panel */
+.season-selector {
+  padding: 16px 16px 16px 130px;
+  background: #252540;
+  border-top: 1px solid #333;
+}
+
+.season-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.season-selector-title {
+  font-size: 14px;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.btn-select-all-seasons {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-select-all-seasons:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.season-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.season-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.season-checkbox:hover {
+  border-color: #e94560;
+}
+
+.season-checkbox input {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #e94560;
+}
+
+.season-checkbox input:checked + .season-label {
+  color: #fff;
+}
+
+.season-label {
+  font-size: 13px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.season-selector-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-save-seasons {
+  padding: 8px 20px;
+  background: #e94560;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-save-seasons:hover:not(:disabled) {
+  background: #f05f7a;
+}
+
+.btn-save-seasons:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for season selector */
+@media (max-width: 600px) {
+  .season-selector {
+    padding: 16px;
+  }
+
+  .season-checkboxes {
+    gap: 6px;
+  }
+
+  .season-checkbox {
+    padding: 4px 8px;
+  }
+
+  .season-label {
+    font-size: 12px;
+  }
 }
 </style>
