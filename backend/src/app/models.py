@@ -46,6 +46,8 @@ class Watchlist(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, added, downloading
     selected_seasons: Mapped[str | None] = mapped_column(Text, nullable=True)
     # JSON array like "[1, 2, 3]" or null for all seasons
+    is_season_update: Mapped[bool] = mapped_column(Boolean, default=False)
+    # True when adding seasons to existing show in Sonarr
 
     __table_args__ = (
         {"sqlite_autoincrement": True},
