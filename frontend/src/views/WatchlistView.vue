@@ -105,7 +105,10 @@
               <div class="item-meta">
                 <span class="media-type">{{ item.media_type === 'movie' ? 'Movie' : 'TV Show' }}</span>
                 <span :class="['status-badge', item.status]">{{ formatStatus(item.status) }}</span>
-                <span v-if="item.media_type === 'show' && item.total_seasons" class="seasons-summary">
+                <span
+                  v-if="item.media_type === 'show' && item.total_seasons"
+                  :class="['seasons-summary', { 'is-update': item.is_season_update }]"
+                >
                   {{ formatSeasonsSummary(item) }}
                 </span>
               </div>
@@ -511,6 +514,14 @@ function formatSeasonsSummary(item) {
   const total = item.total_seasons || 0
 
   if (total === 0) return ''
+
+  // If this is a season update, show with + prefix
+  if (item.is_season_update) {
+    if (selected.length === 0) return ''
+    return `+Seasons ${selected.join(', ')}`
+  }
+
+  // Regular new show - show fraction or "All seasons"
   if (selected.length === 0 || selected.length === total) {
     return 'All seasons'
   }
@@ -986,6 +997,11 @@ function formatSeasonsSummary(item) {
   background: rgba(233, 69, 96, 0.15);
   padding: 2px 8px;
   border-radius: 10px;
+}
+
+.seasons-summary.is-update {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
 }
 
 /* Season Selector Panel */
