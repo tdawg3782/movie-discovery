@@ -32,7 +32,7 @@ backend/src/app/
 │   ├── discovery/    # TMDB: trending, search, filters, details, person, collection
 │   ├── watchlist/    # CRUD, batch process, batch delete, season selection
 │   ├── radarr/       # Movie library: status, add, queue, recent
-│   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring
+│   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring, season details
 │   ├── settings/     # API keys, root folder paths (encrypted storage)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
@@ -44,7 +44,7 @@ frontend/src/
 │                     # MediaDetailView, PersonView, CollectionView
 ├── components/       # FilterPanel, TrailerModal, CastCarousel, MediaCarousel,
 │                     # QueueItem, DownloadProgress, StatusBadge, SeasonSelectModal
-├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js
+├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
 └── router/           # Vue Router config
 ```
 
@@ -55,7 +55,7 @@ frontend/src/
 | `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls |
 | `backend/src/app/modules/watchlist/service.py` | Watchlist CRUD + season storage |
 | `backend/src/app/modules/sonarr/client.py` | Sonarr API with season monitoring |
-| `frontend/src/components/SeasonSelectModal.vue` | TV show season picker |
+| `frontend/src/components/SeasonSelectModal.vue` | TV show season picker (with status display) |
 | `frontend/src/views/WatchlistView.vue` | Expandable season editing |
 
 ## Code Style
@@ -87,9 +87,11 @@ Settings can also be configured via UI at `/settings`.
 ## Workflow
 
 1. **Add to Watchlist** - Click "+" on any poster (TV shows open season selector)
-2. **Review in Watchlist** - Select items, expand TV shows to edit seasons
-3. **Batch Process** - Send to Radarr/Sonarr with season selection
-4. **Monitor in Library** - See downloads and recent additions
+2. **Add More Seasons** - Click "+" on shows already in Sonarr to add new seasons (green=downloaded, yellow=monitored)
+3. **Review in Watchlist** - Select items, expand TV shows to edit seasons ("+Seasons" shown for updates)
+4. **Batch Process** - Send to Radarr/Sonarr (new shows added, existing shows get season monitoring updated)
+5. **Filter Discovery** - Use "In Radarr/Sonarr" or "Not in Library" filters to find new content
+6. **Monitor in Library** - See downloads and recent additions
 
 ## Testing
 
