@@ -184,3 +184,67 @@ class SonarrClient:
         shows.sort(key=lambda s: s.get("added", ""), reverse=True)
 
         return shows[:limit]
+
+    async def get_series_details(self, tmdb_id: int) -> dict | None:
+        """Get series details with season-level status from Sonarr library.
+
+        Args:
+            tmdb_id: TMDB ID of the series
+
+        Returns:
+            Dict with series info and season status, or None if not in library.
+            Season status is one of:
+            - "downloaded": All episodes have files (percentOfEpisodes == 100)
+            - "monitored": Season is being monitored for download
+            - "available": Season exists but not monitored
+        """
+        # Get TVDB ID from TMDB ID using lookup
+        series_lookup = await self.lookup_series(tmdb_id)
+        if not series_lookup:
+            return None
+
+        tvdb_id = series_lookup.get("tvdbId")
+        if not tvdb_id:
+            return None
+
+        # Check if series is in library
+        series = await self.get_series_by_tvdb_id(tvdb_id)
+        if not series:
+            return None
+
+        # Build season status list
+        seasons = []
+        for season in series.get("seasons", []):
+            season_num = season.get("seasonNumber", 0)
+
+            # Skip specials (season 0)
+            if season_num == 0:
+                continue
+
+            stats = season.get("statistics", {})
+            episode_count = stats.get("episodeCount", 0)
+            episode_file_count = stats.get("episodeFileCount", 0)
+            percent = stats.get("percentOfEpisodes", 0)
+
+            # Determine status
+            if percent == 100:
+                status = "downloaded"
+            elif season.get("monitored", False):
+                status = "monitored"
+            else:
+                status = "available"
+
+            seasons.append({
+                "number": season_num,
+                "status": status,
+                "episodes": f"{episode_file_count}/{episode_count}",
+                "episode_count": episode_count,
+                "episode_file_count": episode_file_count,
+            })
+
+        return {
+            "in_library": True,
+            "sonarr_id": series.get("id"),
+            "title": series.get("title", ""),
+            "seasons": seasons,
+        }
