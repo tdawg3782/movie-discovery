@@ -33,11 +33,27 @@ class SettingsService:
             has_sonarr="sonarr_url" in settings and "sonarr_api_key" in settings,
         )
 
+    # Keys that can be cleared (set to empty/None to delete)
+    CLEARABLE_KEYS = {"radarr_root_folder", "sonarr_root_folder"}
+
     def update_settings(self, update: SettingsUpdate) -> None:
         """Update settings from request."""
-        for key, value in update.model_dump(exclude_none=True).items():
-            self._set_value(key, value)
+        data = update.model_dump()
+        for key, value in data.items():
+            if value is None or value == "":
+                # For clearable keys, delete the setting when cleared
+                if key in self.CLEARABLE_KEYS:
+                    self._delete_value(key)
+                # For other keys, skip (don't overwrite with None)
+            else:
+                self._set_value(key, value)
         self.db.commit()
+
+    def _delete_value(self, key: str) -> None:
+        """Delete a setting by key."""
+        setting = self.db.query(Settings).filter(Settings.key == key).first()
+        if setting:
+            self.db.delete(setting)
 
     def get_raw_value(self, key: str) -> Optional[str]:
         """Get decrypted value for internal use."""

@@ -93,14 +93,15 @@ def test_add_movie_success(client, mock_radarr_client):
 
 
 def test_add_movie_success_default_quality(client, mock_radarr_client):
-    """Test adding movie with default quality profile."""
+    """Test adding movie with default quality profile (resolved by client)."""
     mock_radarr_client.add_movie.return_value = {"title": "Test Movie", "id": 1}
 
     response = client.post("/api/radarr/add", json={"tmdb_id": 123})
 
     assert response.status_code == 200
+    # Router passes None, client resolves default quality profile
     mock_radarr_client.add_movie.assert_called_once_with(
-        tmdb_id=123, quality_profile_id=1
+        tmdb_id=123, quality_profile_id=None
     )
 
 

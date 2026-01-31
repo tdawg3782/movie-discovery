@@ -193,11 +193,17 @@ async function saveSettings() {
   saveMessage.value = ''
 
   try {
-    // Only send non-empty values
+    // Build updates - include empty strings for clearable fields
+    const clearableFields = ['radarr_root_folder', 'sonarr_root_folder']
     const updates = {}
+
     Object.entries(form).forEach(([key, value]) => {
-      if (value && value.trim()) {
-        updates[key] = value.trim()
+      const trimmed = value ? value.trim() : ''
+      if (trimmed) {
+        updates[key] = trimmed
+      } else if (clearableFields.includes(key)) {
+        // Send empty string to clear root folder settings
+        updates[key] = ''
       }
     })
 

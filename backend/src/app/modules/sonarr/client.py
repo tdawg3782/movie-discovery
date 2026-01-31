@@ -102,7 +102,12 @@ class SonarrClient:
         series["qualityProfileId"] = quality_profile_id
         series["rootFolderPath"] = root_folder_path
         series["monitored"] = True
+        series["seasonFolder"] = True  # Ensure season folders are created
         series["addOptions"] = {"searchForMissingEpisodes": True}
+
+        # Remove path if present - let Sonarr compute it from rootFolderPath + title
+        # The lookup response may include an empty or incorrect path field
+        series.pop("path", None)
 
         return await self._post("/series", series)
 

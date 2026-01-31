@@ -35,14 +35,16 @@ async def test_get_movie_not_found(client):
 
 @pytest.mark.asyncio
 async def test_add_movie(client):
+    mock_existing = []  # Not in library
     mock_lookup = [{"tmdbId": 123, "title": "Test Movie", "year": 2024}]
     mock_folders = [{"path": "/movies"}]
+    mock_profiles = [{"id": 1, "name": "Any"}]
     mock_add = {"id": 1, "tmdbId": 123, "title": "Test Movie"}
 
     with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
         with patch.object(client, "_post", new_callable=AsyncMock) as mock_post:
-            # First call is lookup_movie, second is rootfolder
-            mock_get.side_effect = [mock_lookup, mock_folders]
+            # Order: get_movie_by_tmdb_id, lookup_movie, rootfolder, qualityprofile
+            mock_get.side_effect = [mock_existing, mock_lookup, mock_folders, mock_profiles]
             mock_post.return_value = mock_add
             result = await client.add_movie(tmdb_id=123)
 
@@ -52,7 +54,8 @@ async def test_add_movie(client):
 @pytest.mark.asyncio
 async def test_add_movie_not_found(client):
     with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
-        mock_get.return_value = []  # lookup returns empty
+        # Order: get_movie_by_tmdb_id (not in library), lookup_movie (not found)
+        mock_get.side_effect = [[], []]
         with pytest.raises(ValueError, match="Movie not found: 999"):
             await client.add_movie(tmdb_id=999)
 
@@ -60,11 +63,12 @@ async def test_add_movie_not_found(client):
 @pytest.mark.asyncio
 async def test_add_movie_no_root_folders(client):
     """Raise error when no root folders are configured."""
+    mock_existing = []  # Not in library
     mock_lookup = [{"tmdbId": 123, "title": "Test Movie", "year": 2024}]
 
     with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
-        # First call is lookup_movie, second is rootfolder (empty)
-        mock_get.side_effect = [mock_lookup, []]
+        # Order: get_movie_by_tmdb_id, lookup_movie, rootfolder (empty)
+        mock_get.side_effect = [mock_existing, mock_lookup, []]
         with pytest.raises(ValueError, match="No root folders configured in Radarr"):
             await client.add_movie(tmdb_id=123)
 

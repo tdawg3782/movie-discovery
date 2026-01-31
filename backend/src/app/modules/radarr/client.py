@@ -83,6 +83,10 @@ class RadarrClient:
         movie["monitored"] = True
         movie["addOptions"] = {"searchForMovie": True}
 
+        # Remove path if present - let Radarr compute it from rootFolderPath + title
+        # The lookup response may include an empty or incorrect path field
+        movie.pop("path", None)
+
         return await self._post("/movie", movie)
 
     async def get_status(self, tmdb_id: int) -> str:

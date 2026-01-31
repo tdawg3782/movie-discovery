@@ -93,14 +93,15 @@ def test_add_series_success(client, mock_sonarr_client):
 
 
 def test_add_series_success_default_quality(client, mock_sonarr_client):
-    """Test adding series with default quality profile."""
+    """Test adding series with default quality profile (resolved by client)."""
     mock_sonarr_client.add_series.return_value = {"title": "Test Series", "id": 1}
 
     response = client.post("/api/sonarr/add", json={"tmdb_id": 123})
 
     assert response.status_code == 200
+    # Router passes None, client resolves default quality profile
     mock_sonarr_client.add_series.assert_called_once_with(
-        tmdb_id=123, quality_profile_id=1
+        tmdb_id=123, quality_profile_id=None
     )
 
 
