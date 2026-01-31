@@ -48,3 +48,37 @@ async def test_get_series_details_not_in_library(client):
         result = await client.get_series_details(tmdb_id=1396)
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_update_season_monitoring(client):
+    """Update monitoring for additional seasons."""
+    mock_lookup = [{"tvdbId": 81189}]
+    mock_existing = {
+        "id": 1,
+        "title": "Breaking Bad",
+        "tvdbId": 81189,
+        "seasons": [
+            {"seasonNumber": 1, "monitored": True},
+            {"seasonNumber": 2, "monitored": False},
+            {"seasonNumber": 3, "monitored": False},
+        ]
+    }
+    mock_updated = {**mock_existing, "seasons": [
+        {"seasonNumber": 1, "monitored": True},
+        {"seasonNumber": 2, "monitored": True},  # Now monitored
+        {"seasonNumber": 3, "monitored": False},
+    ]}
+
+    with patch.object(client, "_get", new_callable=AsyncMock) as mock_get:
+        with patch.object(client, "_put", new_callable=AsyncMock) as mock_put:
+            with patch.object(client, "_post", new_callable=AsyncMock) as mock_post:
+                mock_get.side_effect = [mock_lookup, [mock_existing]]
+                mock_put.return_value = mock_updated
+                mock_post.return_value = {"id": 123}  # Command response
+
+                result = await client.update_season_monitoring(tmdb_id=1396, seasons_to_add=[2])
+
+    assert result["seasons"][1]["monitored"] is True
+    mock_put.assert_called_once()
+    mock_post.assert_called_once()  # Search command

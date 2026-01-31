@@ -35,6 +35,18 @@ class SonarrClient:
             response.raise_for_status()
             return response.json()
 
+    async def _put(self, endpoint: str, data: dict) -> Any:
+        """Make PUT request to Sonarr API."""
+        headers = {"X-Api-Key": self.api_key}
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            response = await client.put(
+                f"{self.url}/api/v3{endpoint}",
+                headers=headers,
+                json=data,
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def get_series_by_tvdb_id(self, tvdb_id: int) -> dict | None:
         """Get series from library by TVDB ID."""
         series_list = await self._get("/series", {"tvdbId": tvdb_id})
@@ -248,3 +260,39 @@ class SonarrClient:
             "title": series.get("title", ""),
             "seasons": seasons,
         }
+
+    async def update_season_monitoring(self, tmdb_id: int, seasons_to_add: list[int]) -> dict:
+        """Add monitoring for additional seasons and trigger search.
+
+        Args:
+            tmdb_id: TMDB ID of the series
+            seasons_to_add: List of season numbers to start monitoring
+
+        Returns:
+            Updated series data from Sonarr
+        """
+        # Get TVDB ID
+        series = await self.lookup_series(tmdb_id)
+        if not series or not series.get("tvdbId"):
+            raise ValueError(f"Series not found: {tmdb_id}")
+
+        # Get existing series from library
+        existing = await self.get_series_by_tvdb_id(series["tvdbId"])
+        if not existing:
+            raise ValueError(f"Series not in Sonarr library: {tmdb_id}")
+
+        # Update season monitoring
+        for season in existing.get("seasons", []):
+            if season.get("seasonNumber") in seasons_to_add:
+                season["monitored"] = True
+
+        # PUT updated series
+        updated = await self._put(f"/series/{existing['id']}", existing)
+
+        # Trigger search for newly monitored seasons
+        await self._post("/command", {
+            "name": "SeriesSearch",
+            "seriesId": existing["id"]
+        })
+
+        return updated
