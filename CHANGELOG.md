@@ -5,6 +5,22 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-01-30
+
+### Added
+
+- **Root Folder Configuration**
+  - Configure custom root folder paths for Radarr and Sonarr in Settings UI
+  - New fields: `radarr_root_folder` and `sonarr_root_folder`
+  - Allows directing content to specific storage locations (e.g., `/movies-usb`, `/tv-usb`)
+  - Falls back to default root folder if not specified
+
+### Changed
+
+- Added `cloudflare_tunnel_token` to config to support Docker deployment .env files
+
+---
+
 ## [2.2.0] - 2026-01-30
 
 ### Added

@@ -58,8 +58,9 @@ Open http://localhost:3000
 
 1. Go to **Settings** (`/settings`)
 2. Enter your API keys (TMDB required, Radarr/Sonarr optional)
-3. Click **Test** to verify each connection
-4. Click **Save**
+3. Optionally set **Root Folder Paths** for Radarr/Sonarr (e.g., `/movies-usb`, `/tv-usb`)
+4. Click **Test** to verify each connection
+5. Click **Save**
 
 Alternatively, create `.env` in the project root:
 
