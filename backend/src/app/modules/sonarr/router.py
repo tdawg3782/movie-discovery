@@ -72,6 +72,18 @@ async def get_batch_status(
         )
 
 
+@router.get("/series/{tmdb_id}/seasons")
+async def get_series_seasons(
+    tmdb_id: int = Path(gt=0, description="TMDB series ID"),
+    client: SonarrClient = Depends(get_sonarr_client),
+):
+    """Get season-level status for a series in Sonarr library."""
+    result = await client.get_series_details(tmdb_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Series not in Sonarr library")
+    return result
+
+
 @router.get("/queue")
 async def get_sonarr_queue(client: SonarrClient = Depends(get_sonarr_client)):
     """Get current download queue from Sonarr."""
