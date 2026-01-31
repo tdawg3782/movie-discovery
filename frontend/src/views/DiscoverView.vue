@@ -101,7 +101,9 @@ const filters = reactive({
   yearLte: null,
   ratingGte: null,
   certification: null,
-  sortBy: 'popularity.desc'
+  sortBy: 'popularity.desc',
+  inLibrary: false,
+  notInLibrary: false
 })
 
 const fetchLibraryStatuses = async (mediaItems) => {
@@ -140,6 +142,28 @@ const fetchLibraryStatuses = async (mediaItems) => {
   }
 }
 
+const applyLibraryFilter = () => {
+  // Only filter if one of the library filters is active
+  if (!filters.inLibrary && !filters.notInLibrary) return
+
+  items.value = items.value.filter(item => {
+    const inLib = item.library_status && item.library_status !== 'watchlist'
+
+    // If only "In Library" is checked, show only in-library items
+    if (filters.inLibrary && !filters.notInLibrary) {
+      return inLib
+    }
+
+    // If only "Not in Library" is checked, show only non-library items
+    if (filters.notInLibrary && !filters.inLibrary) {
+      return !inLib
+    }
+
+    // If both are checked, show all (no filtering)
+    return true
+  })
+}
+
 const fetchTrending = () => {
   isSearching.value = false
   fetchContent()
@@ -164,6 +188,7 @@ const performSearch = async (page = 1, append = false) => {
 
     // Fetch library statuses for search results
     await fetchLibraryStatuses(append ? newResults : items.value)
+    if (!append) applyLibraryFilter()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Search failed'
     if (!append) items.value = []
@@ -187,7 +212,9 @@ const handleFilterChange = (newFilters) => {
     newFilters.yearLte ||
     newFilters.ratingGte ||
     newFilters.certification ||
-    newFilters.sortBy !== 'popularity.desc'
+    newFilters.sortBy !== 'popularity.desc' ||
+    newFilters.inLibrary ||
+    newFilters.notInLibrary
   )
   currentPage.value = 1
   fetchContent()
@@ -222,6 +249,7 @@ const fetchContent = async (page = 1, append = false) => {
 
     // Fetch library statuses
     await fetchLibraryStatuses(append ? newResults : items.value)
+    applyLibraryFilter()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load content'
     if (!append) items.value = []
