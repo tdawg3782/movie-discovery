@@ -199,15 +199,13 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
    - Create tunnel, copy the token
    - Configure public hostname pointing to `frontend:80`
 
-2. **Copy files to NAS**
-   ```
-   /docker/hoveyflix/
-   ├── backend/
-   ├── frontend/
-   ├── data/
-   ├── docker-compose.yml
-   ├── .dockerignore
-   └── .env
+2. **Clone repo to NAS**
+   ```bash
+   ssh user@nas-ip
+   cd /volume1/docker
+   git clone https://github.com/tdawg3782/movie-discovery.git hoveyflix
+   cd hoveyflix
+   cp .env.example .env
    ```
 
 3. **Configure environment**
@@ -241,6 +239,7 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
 | Rebuild | `sudo docker-compose up -d --build` |
 | View logs | `sudo docker logs hoveyflix-backend` |
 | Restart | `sudo docker-compose restart` |
+| Update | `git pull && sudo docker-compose up -d --build` |
 
 ### Architecture
 

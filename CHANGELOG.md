@@ -5,6 +5,26 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-01-30
+
+### Added
+
+- **Library Status Filter**
+  - New filter in FilterPanel: "All", "In Library", "Not in Library"
+  - DiscoverView filters results by Radarr/Sonarr library status
+  - Easily find content you don't already have
+
+- **Season Update Indicator**
+  - WatchlistView shows "+Seasons" badge for items that are season updates
+  - Distinguishes between new shows and adding seasons to existing shows
+
+- **Season Status for Existing Shows**
+  - MediaDetailView fetches season status from Sonarr for shows already in library
+  - SeasonSelectModal shows which seasons are downloaded (green), monitored (yellow), or available
+  - Add more seasons to shows already in your library
+
+---
+
 ## [2.3.0] - 2026-01-30
 
 ### Added
