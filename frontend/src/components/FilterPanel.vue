@@ -78,6 +78,27 @@
         </select>
       </div>
 
+      <!-- Library Status Filter -->
+      <div class="filter-group">
+        <label>Library Status</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input
+              type="checkbox"
+              v-model="filters.inLibrary"
+            />
+            <span>{{ mediaType === 'movie' ? 'In Radarr' : 'In Sonarr' }}</span>
+          </label>
+          <label class="checkbox-item">
+            <input
+              type="checkbox"
+              v-model="filters.notInLibrary"
+            />
+            <span>Not in Library</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="filter-actions">
         <button class="btn-apply" @click="applyFilters">Apply Filters</button>
@@ -122,7 +143,9 @@ const filters = reactive({
   yearLte: null,
   ratingGte: null,
   certification: '',
-  sortBy: 'popularity.desc'
+  sortBy: 'popularity.desc',
+  inLibrary: false,
+  notInLibrary: false
 })
 
 onMounted(async () => {
@@ -162,7 +185,9 @@ const hasActiveFilters = computed(() => {
     filters.yearLte ||
     filters.ratingGte ||
     filters.certification ||
-    filters.sortBy !== 'popularity.desc'
+    filters.sortBy !== 'popularity.desc' ||
+    filters.inLibrary ||
+    filters.notInLibrary
   )
 })
 
@@ -203,6 +228,13 @@ const activeFilterChips = computed(() => {
     chips.push({ key: 'sort', label: `Sort: ${sortLabels[filters.sortBy]}` })
   }
 
+  if (filters.inLibrary || filters.notInLibrary) {
+    const labels = []
+    if (filters.inLibrary) labels.push(props.mediaType === 'movie' ? 'In Radarr' : 'In Sonarr')
+    if (filters.notInLibrary) labels.push('Not in Library')
+    chips.push({ key: 'library', label: `Library: ${labels.join(', ')}` })
+  }
+
   return chips
 })
 
@@ -218,6 +250,9 @@ function removeFilter(key) {
     filters.certification = ''
   } else if (key === 'sort') {
     filters.sortBy = 'popularity.desc'
+  } else if (key === 'library') {
+    filters.inLibrary = false
+    filters.notInLibrary = false
   }
   applyFilters()
 }
@@ -229,7 +264,9 @@ function applyFilters() {
     yearLte: filters.yearLte,
     ratingGte: filters.ratingGte,
     certification: filters.certification || null,
-    sortBy: filters.sortBy
+    sortBy: filters.sortBy,
+    inLibrary: filters.inLibrary,
+    notInLibrary: filters.notInLibrary
   })
 }
 
@@ -240,6 +277,8 @@ function clearFilters() {
   filters.ratingGte = null
   filters.certification = ''
   filters.sortBy = 'popularity.desc'
+  filters.inLibrary = false
+  filters.notInLibrary = false
   applyFilters()
 }
 </script>
@@ -383,5 +422,25 @@ select {
 
 .active-chip:hover {
   background: #e94560;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.checkbox-item input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 </style>
