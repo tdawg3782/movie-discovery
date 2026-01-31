@@ -100,7 +100,8 @@ async def add_to_watchlist(
         tmdb_id=data.tmdb_id,
         media_type=data.media_type,
         notes=data.notes,
-        selected_seasons=data.selected_seasons
+        selected_seasons=data.selected_seasons,
+        is_season_update=data.is_season_update
     )
 
     # Fetch metadata from TMDB

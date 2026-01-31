@@ -19,7 +19,8 @@ class WatchlistService:
         tmdb_id: int,
         media_type: str,
         notes: str | None = None,
-        selected_seasons: list[int] | None = None
+        selected_seasons: list[int] | None = None,
+        is_season_update: bool = False
     ) -> Watchlist:
         """Add item to watchlist. Returns existing if duplicate."""
         existing = (
@@ -37,7 +38,8 @@ class WatchlistService:
             tmdb_id=tmdb_id,
             media_type=media_type,
             notes=notes,
-            selected_seasons=seasons_json
+            selected_seasons=seasons_json,
+            is_season_update=is_season_update
         )
         self.db.add(item)
         self.db.commit()

@@ -41,6 +41,7 @@ class WatchlistAdd(BaseModel):
     media_type: str
     notes: str | None = None
     selected_seasons: list[int] | None = None  # None = all seasons
+    is_season_update: bool = False  # True when adding seasons to existing show
 
 
 class WatchlistItem(MediaBase):
