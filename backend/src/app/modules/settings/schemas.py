@@ -9,8 +9,10 @@ class SettingsUpdate(BaseModel):
     tmdb_api_key: Optional[str] = None
     radarr_url: Optional[str] = None
     radarr_api_key: Optional[str] = None
+    radarr_root_folder: Optional[str] = None
     sonarr_url: Optional[str] = None
     sonarr_api_key: Optional[str] = None
+    sonarr_root_folder: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -19,8 +21,10 @@ class SettingsResponse(BaseModel):
     tmdb_api_key_masked: Optional[str] = None
     radarr_url: Optional[str] = None
     radarr_api_key_masked: Optional[str] = None
+    radarr_root_folder: Optional[str] = None
     sonarr_url: Optional[str] = None
     sonarr_api_key_masked: Optional[str] = None
+    sonarr_root_folder: Optional[str] = None
     has_tmdb: bool = False
     has_radarr: bool = False
     has_sonarr: bool = False

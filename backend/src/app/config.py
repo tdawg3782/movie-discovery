@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Database
     database_path: str = "./data/movie_discovery.db"
 
+    # Cloudflare (optional, used for deployment)
+    cloudflare_tunnel_token: str = ""
+
     model_config = SettingsConfigDict(
         # Look for .env in project root (parent of backend/)
         # Path: config.py → app → src → backend → movie_discovery (4 parents)

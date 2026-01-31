@@ -62,6 +62,16 @@
             {{ testResults.radarr.message }}
           </div>
         </div>
+        <div class="form-group">
+          <label for="radarr_root_folder">Root Folder Path</label>
+          <input
+            id="radarr_root_folder"
+            v-model="form.radarr_root_folder"
+            type="text"
+            :placeholder="settings.radarr_root_folder || '/movies'"
+          />
+          <div class="hint">Leave empty to use Radarr's default root folder</div>
+        </div>
       </section>
 
       <!-- Sonarr Section -->
@@ -96,6 +106,16 @@
             {{ testResults.sonarr.message }}
           </div>
         </div>
+        <div class="form-group">
+          <label for="sonarr_root_folder">Root Folder Path</label>
+          <input
+            id="sonarr_root_folder"
+            v-model="form.sonarr_root_folder"
+            type="text"
+            :placeholder="settings.sonarr_root_folder || '/tv'"
+          />
+          <div class="hint">Leave empty to use Sonarr's default root folder</div>
+        </div>
       </section>
 
       <!-- Save Button -->
@@ -125,8 +145,10 @@ const form = reactive({
   tmdb_api_key: '',
   radarr_url: '',
   radarr_api_key: '',
+  radarr_root_folder: '',
   sonarr_url: '',
-  sonarr_api_key: ''
+  sonarr_api_key: '',
+  sonarr_root_folder: ''
 })
 
 const showKeys = reactive({
@@ -154,9 +176,11 @@ onMounted(async () => {
 async function loadSettings() {
   try {
     settings.value = await settingsService.getSettings()
-    // Pre-fill URLs (not keys, those stay masked)
+    // Pre-fill URLs and root folders (not keys, those stay masked)
     form.radarr_url = settings.value.radarr_url || ''
+    form.radarr_root_folder = settings.value.radarr_root_folder || ''
     form.sonarr_url = settings.value.sonarr_url || ''
+    form.sonarr_root_folder = settings.value.sonarr_root_folder || ''
   } catch (error) {
     console.error('Failed to load settings:', error)
   } finally {
@@ -349,5 +373,11 @@ h1 {
   text-align: center;
   color: #ccc;
   padding: 2rem;
+}
+
+.hint {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #888;
 }
 </style>
