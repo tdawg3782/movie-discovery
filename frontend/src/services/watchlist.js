@@ -3,12 +3,13 @@ import api from './api'
 export const watchlistService = {
   getAll: () => api.get('/watchlist'),
 
-  add: (tmdbId, mediaType, notes = null, selectedSeasons = null) =>
+  add: (tmdbId, mediaType, notes = null, selectedSeasons = null, isSeasonUpdate = false) =>
     api.post('/watchlist', {
       tmdb_id: tmdbId,
       media_type: mediaType,
       notes,
-      selected_seasons: selectedSeasons
+      selected_seasons: selectedSeasons,
+      is_season_update: isSeasonUpdate
     }),
 
   remove: (id) => api.delete(`/watchlist/${id}`),

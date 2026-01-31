@@ -92,6 +92,7 @@
     <SeasonSelectModal
       :is-open="showSeasonModal"
       :show="media"
+      :existing-seasons="existingSeasons"
       @close="showSeasonModal = false"
       @add="handleAddWithSeasons"
     />
@@ -111,6 +112,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import discoverService from '@/services/discover'
 import { watchlistService } from '@/services/watchlist'
+import { sonarrService } from '@/services/sonarr'
 import CastCarousel from '@/components/CastCarousel.vue'
 import MediaCarousel from '@/components/MediaCarousel.vue'
 import TrailerModal from '@/components/TrailerModal.vue'
@@ -123,6 +125,7 @@ const showTrailer = ref(false)
 const showSeasonModal = ref(false)
 const addingToWatchlist = ref(false)
 const addedToWatchlist = ref(false)
+const existingSeasons = ref(null)
 
 const mediaType = computed(() => route.meta.mediaType || 'movie')
 const mediaId = computed(() => route.params.id)
@@ -173,17 +176,33 @@ watch(() => route.params.id, async () => {
 async function fetchMedia() {
   loading.value = true
   media.value = null
+  existingSeasons.value = null
 
   try {
     if (mediaType.value === 'movie') {
       media.value = await discoverService.getMovieDetail(mediaId.value)
     } else {
       media.value = await discoverService.getShowDetail(mediaId.value)
+      await checkLibraryStatus()
     }
   } catch (error) {
     console.error('Failed to fetch media:', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function checkLibraryStatus() {
+  if (mediaType.value === 'tv') {
+    try {
+      const details = await sonarrService.getSeriesSeasons(mediaId.value)
+      if (details?.in_library) {
+        existingSeasons.value = details.seasons
+      }
+    } catch (e) {
+      // Not in library, that's fine
+      existingSeasons.value = null
+    }
   }
 }
 
@@ -208,10 +227,10 @@ async function addToWatchlist() {
   }
 }
 
-async function handleAddWithSeasons(selectedSeasons) {
+async function handleAddWithSeasons({ seasons, isUpdate }) {
   addingToWatchlist.value = true
   try {
-    await watchlistService.add(mediaId.value, 'show', null, selectedSeasons)
+    await watchlistService.add(mediaId.value, 'show', null, seasons, isUpdate)
     addedToWatchlist.value = true
     showSeasonModal.value = false
   } catch (error) {
