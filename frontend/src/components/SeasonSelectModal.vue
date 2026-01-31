@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal">
       <div class="modal-header">
-        <h2>Add to Watchlist</h2>
+        <h2>{{ isUpdate ? 'Add More Seasons' : 'Add to Watchlist' }}</h2>
         <button class="close-btn" @click="$emit('close')">&times;</button>
       </div>
 
@@ -23,29 +23,38 @@
         <div v-if="loading" class="loading">Loading seasons...</div>
 
         <div v-else class="seasons-list">
-          <label class="season-item select-all">
+          <label v-if="availableSeasons.length > 0" class="season-item select-all">
             <input
               type="checkbox"
               :checked="allSelected"
               :indeterminate.prop="someSelected && !allSelected"
               @change="toggleAll"
             />
-            <span>Select All</span>
+            <span>Select All Available</span>
           </label>
 
-          <label
-            v-for="season in filteredSeasons"
-            :key="season.season_number"
-            class="season-item"
+          <div
+            v-for="season in displaySeasons"
+            :key="season.number"
+            :class="['season-item', season.status]"
           >
             <input
+              v-if="season.status === 'available'"
               type="checkbox"
-              :checked="isSelected(season.season_number)"
-              @change="toggleSeason(season.season_number)"
+              :checked="isSelected(season.number)"
+              @change="toggleSeason(season.number)"
             />
-            <span>Season {{ season.season_number }}</span>
-            <span class="episode-count">({{ season.episode_count }} episodes)</span>
-          </label>
+            <span class="status-indicator" :class="season.status"></span>
+            <span>Season {{ season.number }}</span>
+            <span class="episode-count">
+              <template v-if="season.episodes">({{ season.episodes }})</template>
+              <template v-else>({{ season.episode_count }} episodes)</template>
+            </span>
+          </div>
+
+          <div v-if="availableSeasons.length === 0 && isUpdate" class="no-seasons">
+            All seasons are already monitored or downloaded.
+          </div>
         </div>
       </div>
 
@@ -56,7 +65,7 @@
           @click="handleAdd"
           :disabled="selectedSeasons.length === 0 || adding"
         >
-          {{ adding ? 'Adding...' : 'Add to Watchlist' }}
+          {{ adding ? 'Adding...' : buttonText }}
         </button>
       </div>
     </div>
@@ -68,7 +77,8 @@ import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
-  show: { type: Object, required: true }
+  show: { type: Object, required: true },
+  existingSeasons: { type: Array, default: null } // From Sonarr if already in library
 })
 
 const emit = defineEmits(['close', 'add'])
@@ -77,9 +87,36 @@ const loading = ref(false)
 const adding = ref(false)
 const selectedSeasons = ref([])
 
-// Filter out season 0 (specials)
-const filteredSeasons = computed(() =>
-  (props.show.seasons || []).filter(s => s.season_number > 0)
+// Check if this is an update (show already in Sonarr)
+const isUpdate = computed(() => props.existingSeasons !== null)
+
+// Combine TMDB seasons with Sonarr status
+const displaySeasons = computed(() => {
+  const tmdbSeasons = (props.show.seasons || []).filter(s => s.season_number > 0)
+
+  if (!props.existingSeasons) {
+    // New show - all seasons available
+    return tmdbSeasons.map(s => ({
+      number: s.season_number,
+      status: 'available',
+      episode_count: s.episode_count
+    }))
+  }
+
+  // Existing show - merge with Sonarr status
+  return tmdbSeasons.map(s => {
+    const sonarrSeason = props.existingSeasons.find(es => es.number === s.season_number)
+    return {
+      number: s.season_number,
+      status: sonarrSeason?.status || 'available',
+      episodes: sonarrSeason?.episodes,
+      episode_count: s.episode_count
+    }
+  })
+})
+
+const availableSeasons = computed(() =>
+  displaySeasons.value.filter(s => s.status === 'available')
 )
 
 const releaseYear = computed(() => {
@@ -88,18 +125,30 @@ const releaseYear = computed(() => {
 })
 
 const allSelected = computed(() =>
-  filteredSeasons.value.length > 0 &&
-  filteredSeasons.value.every(s => selectedSeasons.value.includes(s.season_number))
+  availableSeasons.value.length > 0 &&
+  availableSeasons.value.every(s => selectedSeasons.value.includes(s.number))
 )
 
-const someSelected = computed(() =>
-  selectedSeasons.value.length > 0
-)
+const someSelected = computed(() => selectedSeasons.value.length > 0)
 
-// Initialize with all seasons selected when modal opens
+const buttonText = computed(() => {
+  const count = selectedSeasons.value.length
+  if (isUpdate.value) {
+    return count === 0 ? 'Select Seasons' : `Add ${count} Season${count > 1 ? 's' : ''}`
+  }
+  return 'Add to Watchlist'
+})
+
+// Initialize selection when modal opens
 watch(() => props.isOpen, (open) => {
   if (open) {
-    selectedSeasons.value = filteredSeasons.value.map(s => s.season_number)
+    if (isUpdate.value) {
+      // For updates, start with nothing selected
+      selectedSeasons.value = []
+    } else {
+      // For new shows, select all
+      selectedSeasons.value = availableSeasons.value.map(s => s.number)
+    }
   }
 })
 
@@ -120,14 +169,17 @@ function toggleAll() {
   if (allSelected.value) {
     selectedSeasons.value = []
   } else {
-    selectedSeasons.value = filteredSeasons.value.map(s => s.season_number)
+    selectedSeasons.value = availableSeasons.value.map(s => s.number)
   }
 }
 
 async function handleAdd() {
   adding.value = true
   try {
-    emit('add', selectedSeasons.value)
+    emit('add', {
+      seasons: selectedSeasons.value,
+      isUpdate: isUpdate.value
+    })
   } finally {
     adding.value = false
   }
@@ -293,5 +345,42 @@ async function handleAdd() {
 .btn-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Status indicator styles */
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-indicator.downloaded {
+  background: #4ade80;
+}
+
+.status-indicator.monitored {
+  background: #fbbf24;
+}
+
+.status-indicator.available {
+  background: #6b7280;
+}
+
+.season-item.downloaded,
+.season-item.monitored {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.season-item.downloaded:hover,
+.season-item.monitored:hover {
+  background: #252540;
+}
+
+.no-seasons {
+  text-align: center;
+  color: #888;
+  padding: 2rem;
 }
 </style>
