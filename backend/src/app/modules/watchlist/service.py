@@ -111,7 +111,13 @@ class WatchlistService:
 
                     client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
                     root_folder = get_setting("sonarr_root_folder")
-                    await client.add_series(tmdb_id, root_folder_path=root_folder, selected_seasons=selected_seasons)
+
+                    if item and item.is_season_update:
+                        # Update existing show's season monitoring
+                        await client.update_season_monitoring(tmdb_id, selected_seasons)
+                    else:
+                        # Add new show
+                        await client.add_series(tmdb_id, root_folder_path=root_folder, selected_seasons=selected_seasons)
 
                 processed.append(tmdb_id)
 

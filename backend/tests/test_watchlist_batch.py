@@ -155,3 +155,82 @@ def test_batch_process_handles_errors(mock_add_movie, client):
     assert len(data["failed"]) == 1
     assert data["failed"][0]["tmdb_id"] == 603
     assert "already in library" in data["failed"][0]["error"]
+
+
+# Service-level tests for season update routing
+from unittest.mock import MagicMock
+from app.modules.watchlist.service import WatchlistService
+
+
+@pytest.fixture
+def db():
+    """Create an in-memory SQLite database for service tests."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
+
+
+@pytest.mark.asyncio
+async def test_batch_process_season_update(db):
+    """Batch process routes season updates to update_season_monitoring."""
+    # Add item with is_season_update=True
+    item = Watchlist(
+        tmdb_id=1396,
+        media_type="tv",
+        selected_seasons="[4, 5]",
+        is_season_update=True
+    )
+    db.add(item)
+    db.commit()
+
+    service = WatchlistService(db)
+
+    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.update_season_monitoring = AsyncMock(return_value={"id": 1})
+
+        with patch("app.modules.watchlist.service.settings") as mock_settings:
+            mock_settings.sonarr_url = "http://localhost:8989"
+            mock_settings.sonarr_api_key = "test"
+
+            with patch("app.modules.watchlist.service.get_setting", return_value=None):
+                processed, failed = await service.process_batch([1396], "tv")
+
+    assert 1396 in processed
+    mock_instance.update_season_monitoring.assert_called_once_with(1396, [4, 5])
+
+
+@pytest.mark.asyncio
+async def test_batch_process_new_series(db):
+    """Batch process uses add_series for new shows."""
+    # Add item without is_season_update (defaults False)
+    item = Watchlist(
+        tmdb_id=1234,
+        media_type="tv",
+        selected_seasons="[1, 2]"
+    )
+    db.add(item)
+    db.commit()
+
+    service = WatchlistService(db)
+
+    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.add_series = AsyncMock(return_value={"id": 1, "title": "Test"})
+
+        with patch("app.modules.watchlist.service.settings") as mock_settings:
+            mock_settings.sonarr_url = "http://localhost:8989"
+            mock_settings.sonarr_api_key = "test"
+
+            with patch("app.modules.watchlist.service.get_setting", return_value="/tv"):
+                processed, failed = await service.process_batch([1234], "tv")
+
+    assert 1234 in processed
+    mock_instance.add_series.assert_called_once()
