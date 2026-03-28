@@ -100,8 +100,8 @@ SONARR_API_KEY=your_key
 
 | Layer | Technology |
 |-------|------------|
-| Backend | Python 3.11, FastAPI, SQLAlchemy, SQLite |
-| Frontend | Vue 3, Vite, Pinia, Axios |
+| Backend | Python 3.11, FastAPI, SQLAlchemy, SQLite, httpx |
+| Frontend | Vue 3, Vite, Axios |
 | APIs | TMDB, Radarr, Sonarr |
 
 ## Project Structure
@@ -110,6 +110,7 @@ SONARR_API_KEY=your_key
 movie_discovery/
 ├── backend/src/app/
 │   ├── modules/
+│   │   ├── arr_base.py   # Shared HTTP client for Radarr/Sonarr
 │   │   ├── discovery/    # TMDB: trending, search, filters, details
 │   │   ├── watchlist/    # Watchlist CRUD, batch processing
 │   │   ├── radarr/       # Movies: status, add, queue, recent
@@ -239,7 +240,7 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
 | Rebuild | `sudo docker-compose up -d --build` |
 | View logs | `sudo docker logs hoveyflix-backend` |
 | Restart | `sudo docker-compose restart` |
-| Update | `git pull && sudo docker-compose up -d --build` |
+| Update | `git fetch origin && git reset --hard origin/master && sudo docker-compose up -d --build` |
 
 ### Architecture
 

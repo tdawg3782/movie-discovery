@@ -5,6 +5,52 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-03-28
+
+### Changed
+
+- **Shared HTTP Client for Radarr/Sonarr**
+  - Extracted `BaseArrClient` base class with persistent `httpx.AsyncClient`
+  - Radarr/Sonarr clients now reuse TCP connections instead of creating one per API call
+  - Reduces latency and connection overhead, especially during batch operations
+
+- **Parallelized Batch Processing**
+  - Backend: `process_batch` now uses `asyncio.gather()` instead of sequential loop
+  - Frontend: movie and show processing run in parallel via `Promise.all()`
+  - Client and settings cached outside loop to avoid redundant creation
+
+- **Deduplicated Watchlist Enrichment**
+  - Extracted `_enrich_watchlist_item()` and `_parse_seasons()` shared helpers
+  - Eliminated ~80 lines of copy-pasted TMDB enrichment logic in watchlist router
+
+- **Simplified TMDB Client**
+  - Added `_get_or_none()` method for 404 handling (used by 4 detail endpoints)
+  - Unified `discover_movies`/`discover_shows` into shared `discover()` method
+  - `TMDBAPIError` now stores `status_code` attribute for reliable error detection
+
+- **Discovery Router Cleanup**
+  - Added `_build_media_list()` helper (used by 4 endpoints)
+  - Replaced `Optional[X]` imports with `X | None` syntax (Python 3.11+)
+
+- **Settings Router Cleanup**
+  - Extracted `_test_arr_connection()` helper for Radarr/Sonarr connection tests
+
+- **Centralized Client Factories**
+  - Library router imports `get_radarr_client`/`get_sonarr_client` from their modules instead of redefining
+
+### Fixed
+
+- **WatchlistView** sent `'tv'` media type to batch process endpoint; schema expects `'show'`
+- **`datetime.utcnow`** replaced with timezone-aware `datetime.now(timezone.utc)` (deprecated in Python 3.12+)
+
+### Removed
+
+- Unused `isInLibrary` computed property in StatusBadge component
+- Unused library service functions (`getMovieStatus`, `addMovie`, `addShow`, `getShowStatus`, `getRadarrQueue`, `getSonarrQueue`, `getRecentMovies`, `getRecentShows`)
+- Dead code in appStore (Pinia store actions that were never imported)
+
+---
+
 ## [2.4.1] - 2026-01-31
 
 ### Fixed

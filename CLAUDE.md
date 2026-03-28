@@ -18,9 +18,11 @@
 | `frontend/Dockerfile` | Node build + nginx |
 | `frontend/nginx.conf` | Reverse proxy /api to backend |
 
-Deploy to NAS:
+Deploy to NAS (no git installed — use `git fetch`/`reset` or `scp`):
 ```bash
+ssh user@nas-ip
 cd /volume1/docker/hoveyflix
+git fetch origin && git reset --hard origin/master
 sudo docker-compose up -d --build
 ```
 
@@ -29,10 +31,11 @@ sudo docker-compose up -d --build
 ```
 backend/src/app/
 ├── modules/
+│   ├── arr_base.py   # BaseArrClient: shared HTTP client for Radarr/Sonarr
 │   ├── discovery/    # TMDB: trending, search, filters, details, person, collection
 │   ├── watchlist/    # CRUD, batch process, batch delete, season selection
-│   ├── radarr/       # Movie library: status, add, queue, recent
-│   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring, season details
+│   ├── radarr/       # Movie library: status, add, queue, recent (extends BaseArrClient)
+│   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
 │   ├── settings/     # API keys, root folder paths (encrypted storage)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
@@ -52,8 +55,10 @@ frontend/src/
 
 | File | Purpose |
 |------|---------|
-| `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls |
-| `backend/src/app/modules/watchlist/service.py` | Watchlist CRUD + season storage |
+| `backend/src/app/modules/arr_base.py` | BaseArrClient: persistent httpx client, `_get`/`_post`/`_put` |
+| `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls (`_get_or_none` for 404 handling) |
+| `backend/src/app/modules/watchlist/router.py` | `_enrich_watchlist_item()`, `_parse_seasons()` shared helpers |
+| `backend/src/app/modules/watchlist/service.py` | Watchlist CRUD + parallel batch processing |
 | `backend/src/app/modules/sonarr/client.py` | Sonarr API with season monitoring |
 | `frontend/src/components/SeasonSelectModal.vue` | TV show season picker (with status display) |
 | `frontend/src/views/WatchlistView.vue` | Expandable season editing |
@@ -69,6 +74,15 @@ frontend/src/
 **Frontend (Vue):**
 - Composition API with `<script setup>`
 - Services auto-unwrap `response.data`
+
+## Architecture Patterns
+
+- **BaseArrClient** — Radarr/Sonarr clients inherit shared HTTP logic with persistent connection reuse
+- **TMDBClient._get_or_none()** — Returns None on 404 instead of raising (used for detail endpoints)
+- **Watchlist enrichment** — `_enrich_watchlist_item()` in router handles TMDB metadata + fallbacks
+- **Batch processing** — `asyncio.gather()` (backend) and `Promise.all()` (frontend) for parallelism
+- **Client factories** — Defined once in each module's router, imported by library router
+- **Media type convention** — App uses "show" internally, converts to "tv" for TMDB API calls
 
 ## Environment
 
