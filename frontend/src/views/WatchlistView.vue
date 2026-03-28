@@ -335,16 +335,17 @@ async function processSelected() {
   processResult.value = { processed: [], failed: [] }
 
   try {
-    // Process movies
+    // Process movies and shows in parallel
+    const promises = []
     if (selectedMovieIds.value.length > 0) {
-      const result = await watchlistService.processItems(selectedMovieIds.value, 'movie')
-      processResult.value.processed.push(...result.processed)
-      processResult.value.failed.push(...result.failed)
+      promises.push(watchlistService.processItems(selectedMovieIds.value, 'movie'))
+    }
+    if (selectedShowIds.value.length > 0) {
+      promises.push(watchlistService.processItems(selectedShowIds.value, 'show'))
     }
 
-    // Process shows
-    if (selectedShowIds.value.length > 0) {
-      const result = await watchlistService.processItems(selectedShowIds.value, 'tv')
+    const results = await Promise.all(promises)
+    for (const result of results) {
       processResult.value.processed.push(...result.processed)
       processResult.value.failed.push(...result.failed)
     }

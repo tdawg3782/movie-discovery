@@ -1,38 +1,9 @@
 """Radarr API client."""
-import httpx
-from typing import Any
+from app.modules.arr_base import BaseArrClient
 
 
-class RadarrClient:
+class RadarrClient(BaseArrClient):
     """Client for Radarr API."""
-
-    def __init__(self, url: str, api_key: str):
-        self.url = url.rstrip("/")
-        self.api_key = api_key
-
-    async def _get(self, endpoint: str, params: dict | None = None) -> Any:
-        """Make GET request to Radarr API."""
-        headers = {"X-Api-Key": self.api_key}
-        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
-            response = await client.get(
-                f"{self.url}/api/v3{endpoint}",
-                headers=headers,
-                params=params,
-            )
-            response.raise_for_status()
-            return response.json()
-
-    async def _post(self, endpoint: str, data: dict) -> Any:
-        """Make POST request to Radarr API."""
-        headers = {"X-Api-Key": self.api_key}
-        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
-            response = await client.post(
-                f"{self.url}/api/v3{endpoint}",
-                headers=headers,
-                json=data,
-            )
-            response.raise_for_status()
-            return response.json()
 
     async def get_movie_by_tmdb_id(self, tmdb_id: int) -> dict | None:
         """Get movie from library by TMDB ID."""
@@ -55,7 +26,6 @@ class RadarrClient:
         root_folder_path: str | None = None,
     ) -> dict:
         """Add movie to Radarr."""
-        # Check if already in library
         existing = await self.get_movie_by_tmdb_id(tmdb_id)
         if existing:
             raise ValueError(f"Movie already in Radarr library: {existing.get('title', tmdb_id)}")
@@ -64,14 +34,12 @@ class RadarrClient:
         if not movie:
             raise ValueError(f"Movie not found: {tmdb_id}")
 
-        # Get root folder if not specified
         if not root_folder_path:
             folders = await self._get("/rootfolder")
             if not folders:
                 raise ValueError("No root folders configured in Radarr")
             root_folder_path = folders[0]["path"]
 
-        # Get quality profile if not specified
         if not quality_profile_id:
             profiles = await self.get_quality_profiles()
             if not profiles:
@@ -82,9 +50,6 @@ class RadarrClient:
         movie["rootFolderPath"] = root_folder_path
         movie["monitored"] = True
         movie["addOptions"] = {"searchForMovie": True}
-
-        # Remove path if present - let Radarr compute it from rootFolderPath + title
-        # The lookup response may include an empty or incorrect path field
         movie.pop("path", None)
 
         return await self._post("/movie", movie)
@@ -103,14 +68,9 @@ class RadarrClient:
         return await self._get("/movie")
 
     async def get_batch_status(self, tmdb_ids: list[int]) -> dict[int, str]:
-        """Get status for multiple movies efficiently.
-
-        Returns dict mapping tmdb_id -> status ('available', 'added', or None)
-        """
-        # Fetch all movies once
+        """Get status for multiple movies efficiently."""
         all_movies = await self.get_all_movies()
 
-        # Build lookup by tmdb_id
         library_map = {}
         for movie in all_movies:
             tmdb_id = movie.get("tmdbId")
@@ -120,24 +80,18 @@ class RadarrClient:
                 else:
                     library_map[tmdb_id] = "added"
 
-        # Return status for requested IDs
         return {tmdb_id: library_map.get(tmdb_id) for tmdb_id in tmdb_ids}
 
     async def get_queue(self) -> dict:
         """Get current download queue from Radarr."""
-        params = {
+        return await self._get("/queue", {
             "page": 1,
             "pageSize": 50,
-            "includeMovie": True
-        }
-        return await self._get("/queue", params)
+            "includeMovie": True,
+        })
 
     async def get_recent(self, limit: int = 20) -> list:
         """Get recently added movies from Radarr."""
         movies = await self._get("/movie")
-
-        # Sort by added date, most recent first
         movies.sort(key=lambda m: m.get("added", ""), reverse=True)
-
-        # Return only movies with files (completed downloads)
         return [m for m in movies if m.get("hasFile")][:limit]

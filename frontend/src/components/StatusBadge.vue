@@ -12,8 +12,6 @@ const props = defineProps({
   mediaType: { type: String, default: 'movie' }
 })
 
-const isInLibrary = computed(() => props.status === 'available' || props.status === 'added')
-
 const serviceName = computed(() => props.mediaType === 'movie' ? 'Radarr' : 'Sonarr')
 
 const label = computed(() => {

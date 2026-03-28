@@ -23,99 +23,24 @@ def get_service(db: Session = Depends(get_db)) -> WatchlistService:
     return WatchlistService(db)
 
 
-@router.get("", response_model=WatchlistResponse)
-async def get_watchlist(service: WatchlistService = Depends(get_service)):
-    """Get all watchlist items with enriched metadata from TMDB."""
-    items = service.get_all()
-
-    if not items:
-        return WatchlistResponse(items=[], total=0)
-
-    # Fetch metadata from TMDB concurrently
-    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
-
-    async def enrich_item(item):
-        try:
-            # Convert 'show' to 'tv' for TMDB API
-            tmdb_type = "tv" if item.media_type == "show" else item.media_type
-            details = await tmdb.get_details(item.tmdb_id, tmdb_type)
-
-            # Parse selected_seasons from JSON
-            selected_seasons = None
-            if item.selected_seasons:
-                selected_seasons = json.loads(item.selected_seasons)
-
-            # Get total seasons from TMDB (only for shows)
-            total_seasons = None
-            if item.media_type == "show":
-                total_seasons = details.get("number_of_seasons")
-
-            return WatchlistItem(
-                id=item.id,
-                tmdb_id=item.tmdb_id,
-                media_type=item.media_type,
-                title=details.get("title") or details.get("name") or f"TMDB:{item.tmdb_id}",
-                overview=details.get("overview"),
-                poster_path=details.get("poster_path"),
-                release_date=details.get("release_date") or details.get("first_air_date"),
-                vote_average=details.get("vote_average"),
-                added_at=item.added_at,
-                notes=item.notes,
-                status=item.status,
-                selected_seasons=selected_seasons,
-                total_seasons=total_seasons,
-            )
-        except Exception:
-            # Fallback if TMDB fails - still parse selected_seasons
-            selected_seasons = None
-            if item.selected_seasons:
-                try:
-                    selected_seasons = json.loads(item.selected_seasons)
-                except json.JSONDecodeError:
-                    pass
-
-            return WatchlistItem(
-                id=item.id,
-                tmdb_id=item.tmdb_id,
-                media_type=item.media_type,
-                title=f"TMDB:{item.tmdb_id}",
-                added_at=item.added_at,
-                notes=item.notes,
-                status=item.status,
-                selected_seasons=selected_seasons,
-                total_seasons=None,
-            )
-
-    enriched_items = await asyncio.gather(*[enrich_item(item) for item in items])
-
-    return WatchlistResponse(items=list(enriched_items), total=len(enriched_items))
+def _parse_seasons(raw: str | None) -> list[int] | None:
+    """Parse JSON-encoded seasons string, returning None on failure."""
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return None
 
 
-@router.post("", response_model=WatchlistItem, status_code=201)
-async def add_to_watchlist(
-    data: WatchlistAdd, service: WatchlistService = Depends(get_service)
-):
-    """Add item to watchlist."""
-    item = service.add(
-        tmdb_id=data.tmdb_id,
-        media_type=data.media_type,
-        notes=data.notes,
-        selected_seasons=data.selected_seasons,
-        is_season_update=data.is_season_update
-    )
+async def _enrich_watchlist_item(item, tmdb: TMDBClient) -> WatchlistItem:
+    """Enrich a watchlist DB row with TMDB metadata."""
+    selected_seasons = _parse_seasons(item.selected_seasons)
 
-    # Fetch metadata from TMDB
-    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
     try:
         tmdb_type = "tv" if item.media_type == "show" else item.media_type
         details = await tmdb.get_details(item.tmdb_id, tmdb_type)
 
-        # Parse selected_seasons from JSON
-        selected_seasons = None
-        if item.selected_seasons:
-            selected_seasons = json.loads(item.selected_seasons)
-
-        # Get total seasons from TMDB (only for shows)
         total_seasons = None
         if item.media_type == "show":
             total_seasons = details.get("number_of_seasons")
@@ -136,14 +61,6 @@ async def add_to_watchlist(
             total_seasons=total_seasons,
         )
     except Exception:
-        # Fallback if TMDB fails - still parse selected_seasons
-        selected_seasons = None
-        if item.selected_seasons:
-            try:
-                selected_seasons = json.loads(item.selected_seasons)
-            except json.JSONDecodeError:
-                pass
-
         return WatchlistItem(
             id=item.id,
             tmdb_id=item.tmdb_id,
@@ -155,6 +72,37 @@ async def add_to_watchlist(
             selected_seasons=selected_seasons,
             total_seasons=None,
         )
+
+
+@router.get("", response_model=WatchlistResponse)
+async def get_watchlist(service: WatchlistService = Depends(get_service)):
+    """Get all watchlist items with enriched metadata from TMDB."""
+    items = service.get_all()
+
+    if not items:
+        return WatchlistResponse(items=[], total=0)
+
+    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
+    enriched_items = await asyncio.gather(*[_enrich_watchlist_item(item, tmdb) for item in items])
+
+    return WatchlistResponse(items=list(enriched_items), total=len(enriched_items))
+
+
+@router.post("", response_model=WatchlistItem, status_code=201)
+async def add_to_watchlist(
+    data: WatchlistAdd, service: WatchlistService = Depends(get_service)
+):
+    """Add item to watchlist."""
+    item = service.add(
+        tmdb_id=data.tmdb_id,
+        media_type=data.media_type,
+        notes=data.notes,
+        selected_seasons=data.selected_seasons,
+        is_season_update=data.is_season_update
+    )
+
+    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
+    return await _enrich_watchlist_item(item, tmdb)
 
 
 # Batch endpoints must come BEFORE parameterized endpoints
@@ -187,11 +135,7 @@ async def update_watchlist_seasons(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    selected_seasons = None
-    if item.selected_seasons:
-        selected_seasons = json.loads(item.selected_seasons)
-
-    return {"success": True, "selected_seasons": selected_seasons}
+    return {"success": True, "selected_seasons": _parse_seasons(item.selected_seasons)}
 
 
 # Parameterized endpoint must come AFTER specific endpoints

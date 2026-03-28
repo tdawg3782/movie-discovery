@@ -31,11 +31,24 @@ def update_settings(update: SettingsUpdate, db: Session = Depends(get_db)):
     return service.get_settings()
 
 
+async def _test_arr_connection(url: str, api_key: str, service_name: str) -> ConnectionTestResponse:
+    """Test connection to a Radarr/Sonarr instance."""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{url.rstrip('/')}/api/v3/system/status",
+                headers={"X-Api-Key": api_key},
+            )
+            if resp.status_code == 200:
+                return ConnectionTestResponse(success=True, message=f"{service_name} connection successful")
+            return ConnectionTestResponse(success=False, message=f"{service_name} error: {resp.status_code}")
+    except Exception as e:
+        return ConnectionTestResponse(success=False, message=f"Connection failed: {str(e)}")
+
+
 @router.post("/test", response_model=ConnectionTestResponse)
 async def test_connection(request: ConnectionTestRequest, db: Session = Depends(get_db)):
     """Test connection to a service."""
-    service = SettingsService(db)
-
     if request.service == "tmdb":
         api_key = get_setting("tmdb_api_key")
         if not api_key:
@@ -56,33 +69,13 @@ async def test_connection(request: ConnectionTestRequest, db: Session = Depends(
         api_key = get_setting("radarr_api_key")
         if not url or not api_key:
             return ConnectionTestResponse(success=False, message="Radarr not configured")
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"{url.rstrip('/')}/api/v3/system/status",
-                    headers={"X-Api-Key": api_key}
-                )
-                if resp.status_code == 200:
-                    return ConnectionTestResponse(success=True, message="Radarr connection successful")
-                return ConnectionTestResponse(success=False, message=f"Radarr error: {resp.status_code}")
-        except Exception as e:
-            return ConnectionTestResponse(success=False, message=f"Connection failed: {str(e)}")
+        return await _test_arr_connection(url, api_key, "Radarr")
 
     elif request.service == "sonarr":
         url = get_setting("sonarr_url")
         api_key = get_setting("sonarr_api_key")
         if not url or not api_key:
             return ConnectionTestResponse(success=False, message="Sonarr not configured")
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"{url.rstrip('/')}/api/v3/system/status",
-                    headers={"X-Api-Key": api_key}
-                )
-                if resp.status_code == 200:
-                    return ConnectionTestResponse(success=True, message="Sonarr connection successful")
-                return ConnectionTestResponse(success=False, message=f"Sonarr error: {resp.status_code}")
-        except Exception as e:
-            return ConnectionTestResponse(success=False, message=f"Connection failed: {str(e)}")
+        return await _test_arr_connection(url, api_key, "Sonarr")
 
     return ConnectionTestResponse(success=False, message="Unknown service")
