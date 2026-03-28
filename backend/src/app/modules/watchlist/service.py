@@ -1,4 +1,5 @@
 """Watchlist business logic."""
+import asyncio
 import json
 from sqlalchemy.orm import Session
 
@@ -31,7 +32,6 @@ class WatchlistService:
         if existing:
             return existing
 
-        # Convert seasons list to JSON string for storage
         seasons_json = json.dumps(selected_seasons) if selected_seasons is not None else None
 
         item = Watchlist(
@@ -91,45 +91,47 @@ class WatchlistService:
     async def process_batch(
         self, tmdb_ids: list[int], media_type: str
     ) -> tuple[list[int], list[dict]]:
-        """
-        Process watchlist items by sending to Radarr/Sonarr.
-        Returns (processed_ids, failed_items).
-        """
+        """Process watchlist items by sending to Radarr/Sonarr concurrently."""
         processed = []
         failed = []
 
-        for tmdb_id in tmdb_ids:
+        # Create clients once, cache settings outside loop
+        if media_type == "movie":
+            client = RadarrClient(settings.radarr_url, settings.radarr_api_key)
+            root_folder = get_setting("radarr_root_folder")
+        else:
+            client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
+            root_folder = get_setting("sonarr_root_folder")
+
+        async def process_one(tmdb_id: int) -> tuple[int | None, dict | None]:
             try:
                 if media_type == "movie":
-                    client = RadarrClient(settings.radarr_url, settings.radarr_api_key)
-                    root_folder = get_setting("radarr_root_folder")
                     await client.add_movie(tmdb_id, root_folder_path=root_folder)
                 else:
-                    # Get watchlist item to retrieve selected seasons
                     item = self.get_by_tmdb_id(tmdb_id)
                     selected_seasons = None
                     if item and item.selected_seasons:
                         selected_seasons = json.loads(item.selected_seasons)
 
-                    client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
-                    root_folder = get_setting("sonarr_root_folder")
-
                     if item and item.is_season_update:
-                        # Update existing show's season monitoring
                         await client.update_season_monitoring(tmdb_id, selected_seasons)
                     else:
-                        # Add new show
                         await client.add_series(tmdb_id, root_folder_path=root_folder, selected_seasons=selected_seasons)
 
-                processed.append(tmdb_id)
+                return (tmdb_id, None)
+            except Exception as e:
+                return (None, {"tmdb_id": tmdb_id, "error": str(e)})
 
-                # Update watchlist item status
-                item = self.get_by_tmdb_id(tmdb_id)
+        results = await asyncio.gather(*[process_one(tid) for tid in tmdb_ids])
+
+        for success_id, failure in results:
+            if success_id is not None:
+                processed.append(success_id)
+                item = self.get_by_tmdb_id(success_id)
                 if item:
                     item.status = "added"
                     self.db.commit()
-
-            except Exception as e:
-                failed.append({"tmdb_id": tmdb_id, "error": str(e)})
+            else:
+                failed.append(failure)
 
         return processed, failed

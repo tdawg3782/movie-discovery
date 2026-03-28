@@ -2,19 +2,10 @@
 import asyncio
 from fastapi import APIRouter, Depends, Query
 
-from app.config import settings
+from app.modules.radarr.router import get_radarr_client
+from app.modules.sonarr.router import get_sonarr_client
 from app.modules.radarr.client import RadarrClient
 from app.modules.sonarr.client import SonarrClient
-
-
-def get_radarr_client() -> RadarrClient:
-    """Dependency to get Radarr client instance."""
-    return RadarrClient(url=settings.radarr_url, api_key=settings.radarr_api_key)
-
-
-def get_sonarr_client() -> SonarrClient:
-    """Dependency to get Sonarr client instance."""
-    return SonarrClient(url=settings.sonarr_url, api_key=settings.sonarr_api_key)
 
 
 router = APIRouter(prefix="/api/library", tags=["library"])

@@ -20,7 +20,9 @@ class TMDBNetworkError(TMDBClientError):
 class TMDBAPIError(TMDBClientError):
     """Raised when TMDB API returns an error."""
 
-    pass
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 MediaType = Literal["movie", "tv"]
@@ -53,11 +55,9 @@ class TMDBClient:
             self._client = None
 
     async def __aenter__(self) -> "TMDBClient":
-        """Enter async context."""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit async context and close client."""
         await self.close()
 
     async def _get(self, endpoint: str, params: dict | None = None) -> dict[str, Any]:
@@ -77,10 +77,20 @@ class TMDBClient:
             raise TMDBNetworkError(f"Failed to connect to TMDB API: {e}") from e
         except httpx.HTTPStatusError as e:
             raise TMDBAPIError(
-                f"TMDB API error {e.response.status_code}: {e.response.text}"
+                f"TMDB API error {e.response.status_code}: {e.response.text}",
+                status_code=e.response.status_code,
             ) from e
         except Exception as e:
             raise TMDBClientError(f"Unexpected error: {e}") from e
+
+    async def _get_or_none(self, endpoint: str, params: dict | None = None) -> dict[str, Any] | None:
+        """Make GET request, returning None on 404."""
+        try:
+            return await self._get(endpoint, params)
+        except TMDBAPIError as e:
+            if e.status_code == 404:
+                return None
+            raise
 
     def _validate_media_type(self, media_type: str) -> MediaType:
         """Validate media_type is 'movie' or 'tv'."""
@@ -103,14 +113,12 @@ class TMDBClient:
     async def get_similar(self, tmdb_id: int, media_type: str) -> dict[str, Any]:
         """Get similar movies or shows."""
         validated_type = self._validate_media_type(media_type)
-        endpoint = f"/{validated_type}/{tmdb_id}/similar"
-        return await self._get(endpoint)
+        return await self._get(f"/{validated_type}/{tmdb_id}/similar")
 
     async def get_details(self, tmdb_id: int, media_type: str) -> dict[str, Any]:
         """Get movie or show details."""
         validated_type = self._validate_media_type(media_type)
-        endpoint = f"/{validated_type}/{tmdb_id}"
-        return await self._get(endpoint)
+        return await self._get(f"/{validated_type}/{tmdb_id}")
 
     async def get_movie_genres(self) -> dict[str, Any]:
         """Get list of movie genres from TMDB."""
@@ -120,95 +128,44 @@ class TMDBClient:
         """Get list of TV genres from TMDB."""
         return await self._get("/genre/tv/list")
 
-    async def discover_movies(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
-        """Discover movies with optional filters."""
+    async def discover(self, media_type: MediaType, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        """Discover movies or shows with optional filters."""
         params = {
             "page": page,
             "include_adult": False,
         }
         if filters:
             params.update(filters)
-        return await self._get("/discover/movie", params)
+        return await self._get(f"/discover/{media_type}", params)
+
+    # Keep backward-compatible aliases
+    async def discover_movies(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
+        return await self.discover("movie", page, filters)
 
     async def discover_shows(self, page: int = 1, filters: dict | None = None) -> dict[str, Any]:
-        """Discover TV shows with optional filters."""
-        params = {
-            "page": page,
-            "include_adult": False,
-        }
-        if filters:
-            params.update(filters)
-        return await self._get("/discover/tv", params)
+        return await self.discover("tv", page, filters)
 
     async def get_person(self, person_id: int) -> dict[str, Any] | None:
-        """Get person details with combined credits.
-
-        Args:
-            person_id: TMDB person ID.
-
-        Returns:
-            Person details dict or None if not found.
-        """
-        try:
-            return await self._get(
-                f"/person/{person_id}",
-                {"append_to_response": "combined_credits"},
-            )
-        except TMDBAPIError as e:
-            if "404" in str(e):
-                return None
-            raise
+        """Get person details with combined credits."""
+        return await self._get_or_none(
+            f"/person/{person_id}",
+            {"append_to_response": "combined_credits"},
+        )
 
     async def get_movie_detail(self, movie_id: int) -> dict[str, Any] | None:
-        """Get movie details with credits, videos, and recommendations.
-
-        Args:
-            movie_id: TMDB movie ID.
-
-        Returns:
-            Movie details dict or None if not found.
-        """
-        try:
-            return await self._get(
-                f"/movie/{movie_id}",
-                {"append_to_response": "credits,videos,recommendations"},
-            )
-        except TMDBAPIError as e:
-            if "404" in str(e):
-                return None
-            raise
+        """Get movie details with credits, videos, and recommendations."""
+        return await self._get_or_none(
+            f"/movie/{movie_id}",
+            {"append_to_response": "credits,videos,recommendations"},
+        )
 
     async def get_show_detail(self, show_id: int) -> dict[str, Any] | None:
-        """Get TV show details with credits, videos, and recommendations.
-
-        Args:
-            show_id: TMDB show ID.
-
-        Returns:
-            Show details dict or None if not found.
-        """
-        try:
-            return await self._get(
-                f"/tv/{show_id}",
-                {"append_to_response": "credits,videos,recommendations"},
-            )
-        except TMDBAPIError as e:
-            if "404" in str(e):
-                return None
-            raise
+        """Get TV show details with credits, videos, and recommendations."""
+        return await self._get_or_none(
+            f"/tv/{show_id}",
+            {"append_to_response": "credits,videos,recommendations"},
+        )
 
     async def get_collection(self, collection_id: int) -> dict[str, Any] | None:
-        """Get collection details with all movies.
-
-        Args:
-            collection_id: TMDB collection ID.
-
-        Returns:
-            Collection details dict or None if not found.
-        """
-        try:
-            return await self._get(f"/collection/{collection_id}")
-        except TMDBAPIError as e:
-            if "404" in str(e):
-                return None
-            raise
+        """Get collection details with all movies."""
+        return await self._get_or_none(f"/collection/{collection_id}")

@@ -1,9 +1,13 @@
 """SQLAlchemy database models."""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, Float, DateTime, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class Settings(Base):
@@ -30,7 +34,7 @@ class MediaCache(Base):
     poster_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     release_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     vote_average: Mapped[float | None] = mapped_column(Float, nullable=True)
-    cached_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    cached_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class Watchlist(Base):
@@ -41,7 +45,7 @@ class Watchlist(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, index=True)
     media_type: Mapped[str] = mapped_column(String(10))
-    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, added, downloading
     selected_seasons: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -63,7 +67,7 @@ class LibraryStatus(Base):
     tmdb_id: Mapped[int] = mapped_column(Integer, index=True)
     media_type: Mapped[str] = mapped_column(String(10))
     status: Mapped[str] = mapped_column(String(20))  # 'added', 'downloading', 'available'
-    checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     __table_args__ = (
         {"sqlite_autoincrement": True},
