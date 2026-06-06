@@ -72,6 +72,20 @@ async def get_batch_status(
         )
 
 
+@router.get("/quality-profiles")
+async def get_radarr_quality_profiles(client: RadarrClient = Depends(get_radarr_client)):
+    """List available Radarr quality profiles for settings dropdown."""
+    try:
+        profiles = await client.get_quality_profiles()
+        return [{"id": p["id"], "name": p["name"]} for p in profiles]
+    except TimeoutException:
+        raise HTTPException(status_code=504, detail="Radarr request timed out")
+    except HTTPStatusError as e:
+        raise HTTPException(
+            status_code=503, detail=f"Radarr API error: {e.response.status_code}"
+        )
+
+
 @router.get("/queue")
 async def get_radarr_queue(client: RadarrClient = Depends(get_radarr_client)):
     """Get current download queue from Radarr."""

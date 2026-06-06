@@ -65,3 +65,44 @@ def test_get_raw_value_nonexistent(db):
     service = SettingsService(db)
     raw = service.get_raw_value("nonexistent_key")
     assert raw is None
+
+
+def test_quality_profile_round_trip(db):
+    """Quality profile ids persist as plain strings and round-trip."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(radarr_quality_profile_id="4"))
+    assert service.get_settings().radarr_quality_profile_id == "4"
+    assert service.get_raw_value("radarr_quality_profile_id") == "4"
+
+    service.update_settings(SettingsUpdate(sonarr_quality_profile_id="7"))
+    assert service.get_settings().sonarr_quality_profile_id == "7"
+    assert service.get_raw_value("sonarr_quality_profile_id") == "7"
+
+
+def test_quality_profile_clear(db):
+    """Setting a quality profile to empty string deletes the key."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(radarr_quality_profile_id="4"))
+    service.update_settings(SettingsUpdate(radarr_quality_profile_id=""))
+    assert service.get_raw_value("radarr_quality_profile_id") is None
+
+    service.update_settings(SettingsUpdate(sonarr_quality_profile_id="7"))
+    service.update_settings(SettingsUpdate(sonarr_quality_profile_id=""))
+    assert service.get_raw_value("sonarr_quality_profile_id") is None
+
+def test_partial_update_preserves_other_quality_profile(db):
+    """A partial update for one quality profile must not delete the other."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(radarr_quality_profile_id="4"))
+    service.update_settings(SettingsUpdate(sonarr_quality_profile_id="7"))
+    assert service.get_raw_value("radarr_quality_profile_id") == "4"
+    assert service.get_raw_value("sonarr_quality_profile_id") == "7"
+
+
+def test_partial_update_preserves_other_root_folder(db):
+    """A partial update for one root folder must not delete the other."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(radarr_root_folder="/movies"))
+    service.update_settings(SettingsUpdate(sonarr_root_folder="/tv"))
+    assert service.get_raw_value("radarr_root_folder") == "/movies"
+    assert service.get_raw_value("sonarr_root_folder") == "/tv"

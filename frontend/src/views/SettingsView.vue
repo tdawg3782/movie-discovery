@@ -72,6 +72,14 @@
           />
           <div class="hint">Leave empty to use Radarr's default root folder</div>
         </div>
+        <div class="form-group">
+          <label for="radarr_quality_profile_id">Quality Profile</label>
+          <select id="radarr_quality_profile_id" v-model="form.radarr_quality_profile_id">
+            <option value="">Use Radarr default</option>
+            <option v-for="p in qualityProfiles.radarr" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
+          </select>
+          <div class="hint">Leave on default to use Radarr's first/auto profile</div>
+        </div>
       </section>
 
       <!-- Sonarr Section -->
@@ -116,6 +124,14 @@
           />
           <div class="hint">Leave empty to use Sonarr's default root folder</div>
         </div>
+        <div class="form-group">
+          <label for="sonarr_quality_profile_id">Quality Profile</label>
+          <select id="sonarr_quality_profile_id" v-model="form.sonarr_quality_profile_id">
+            <option value="">Use Sonarr default</option>
+            <option v-for="p in qualityProfiles.sonarr" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
+          </select>
+          <div class="hint">Leave on default to use Sonarr's first/auto profile</div>
+        </div>
       </section>
 
       <!-- Save Button -->
@@ -148,7 +164,14 @@ const form = reactive({
   radarr_root_folder: '',
   sonarr_url: '',
   sonarr_api_key: '',
-  sonarr_root_folder: ''
+  sonarr_root_folder: '',
+  radarr_quality_profile_id: '',
+  sonarr_quality_profile_id: ''
+})
+
+const qualityProfiles = reactive({
+  radarr: [],
+  sonarr: []
 })
 
 const showKeys = reactive({
@@ -181,6 +204,11 @@ async function loadSettings() {
     form.radarr_root_folder = settings.value.radarr_root_folder || ''
     form.sonarr_url = settings.value.sonarr_url || ''
     form.sonarr_root_folder = settings.value.sonarr_root_folder || ''
+    form.radarr_quality_profile_id = settings.value.radarr_quality_profile_id || ''
+    form.sonarr_quality_profile_id = settings.value.sonarr_quality_profile_id || ''
+    // Fetch quality profiles (guarded: service may be unconfigured)
+    try { qualityProfiles.radarr = await settingsService.getRadarrQualityProfiles() } catch (e) { qualityProfiles.radarr = [] }
+    try { qualityProfiles.sonarr = await settingsService.getSonarrQualityProfiles() } catch (e) { qualityProfiles.sonarr = [] }
   } catch (error) {
     console.error('Failed to load settings:', error)
   } finally {
@@ -194,7 +222,7 @@ async function saveSettings() {
 
   try {
     // Build updates - include empty strings for clearable fields
-    const clearableFields = ['radarr_root_folder', 'sonarr_root_folder']
+    const clearableFields = ['radarr_root_folder', 'sonarr_root_folder', 'radarr_quality_profile_id', 'sonarr_quality_profile_id']
     const updates = {}
 
     Object.entries(form).forEach(([key, value]) => {

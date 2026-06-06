@@ -125,3 +125,18 @@ def test_add_movie_no_root_folders(client, mock_radarr_client):
 
     assert response.status_code == 400
     assert "No root folders configured" in response.json()["detail"]
+
+def test_get_quality_profiles(client, mock_radarr_client):
+    """Test quality profiles endpoint returns only id and name."""
+    mock_radarr_client.get_quality_profiles.return_value = [
+        {"id": 1, "name": "Any", "items": [1, 2, 3]},
+        {"id": 4, "name": "HD-1080p"},
+    ]
+
+    response = client.get("/api/radarr/quality-profiles")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"id": 1, "name": "Any"},
+        {"id": 4, "name": "HD-1080p"},
+    ]

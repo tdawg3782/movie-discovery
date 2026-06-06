@@ -157,6 +157,54 @@ def test_batch_process_handles_errors(mock_add_movie, client):
     assert "already in library" in data["failed"][0]["error"]
 
 
+@patch("app.modules.radarr.client.RadarrClient.add_movie")
+@patch("app.modules.watchlist.service.get_setting")
+def test_batch_process_movie_quality_profile(mock_get_setting, mock_add_movie, client):
+    """Saved radarr quality profile id flows as int into add_movie."""
+    mock_get_setting.side_effect = lambda k: {"radarr_quality_profile_id": "4"}.get(k)
+    mock_add_movie.return_value = {"id": 1, "title": "Test"}
+
+    client.post("/api/watchlist", json={"tmdb_id": 700, "media_type": "movie"})
+    response = client.post("/api/watchlist/process", json={
+        "ids": [700],
+        "media_type": "movie",
+    })
+    assert response.status_code == 200
+    assert mock_add_movie.call_args.kwargs["quality_profile_id"] == 4
+
+
+@patch("app.modules.sonarr.client.SonarrClient.add_series")
+@patch("app.modules.watchlist.service.get_setting")
+def test_batch_process_show_quality_profile(mock_get_setting, mock_add_series, client):
+    """Saved sonarr quality profile id flows as int into add_series."""
+    mock_get_setting.side_effect = lambda k: {"sonarr_quality_profile_id": "7"}.get(k)
+    mock_add_series.return_value = {"id": 1, "title": "Test"}
+
+    client.post("/api/watchlist", json={"tmdb_id": 701, "media_type": "show"})
+    response = client.post("/api/watchlist/process", json={
+        "ids": [701],
+        "media_type": "show",
+    })
+    assert response.status_code == 200
+    assert mock_add_series.call_args.kwargs["quality_profile_id"] == 7
+
+
+@patch("app.modules.radarr.client.RadarrClient.add_movie")
+@patch("app.modules.watchlist.service.get_setting")
+def test_batch_process_no_quality_profile(mock_get_setting, mock_add_movie, client):
+    """No saved quality profile id -> None passed to add_movie."""
+    mock_get_setting.side_effect = lambda k: None
+    mock_add_movie.return_value = {"id": 1, "title": "Test"}
+
+    client.post("/api/watchlist", json={"tmdb_id": 702, "media_type": "movie"})
+    response = client.post("/api/watchlist/process", json={
+        "ids": [702],
+        "media_type": "movie",
+    })
+    assert response.status_code == 200
+    assert mock_add_movie.call_args.kwargs["quality_profile_id"] is None
+
+
 # Service-level tests for season update routing
 from unittest.mock import MagicMock
 from app.modules.watchlist.service import WatchlistService

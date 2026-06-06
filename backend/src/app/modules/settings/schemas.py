@@ -13,6 +13,8 @@ class SettingsUpdate(BaseModel):
     sonarr_url: Optional[str] = None
     sonarr_api_key: Optional[str] = None
     sonarr_root_folder: Optional[str] = None
+    radarr_quality_profile_id: Optional[str] = None
+    sonarr_quality_profile_id: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -25,6 +27,8 @@ class SettingsResponse(BaseModel):
     sonarr_url: Optional[str] = None
     sonarr_api_key_masked: Optional[str] = None
     sonarr_root_folder: Optional[str] = None
+    radarr_quality_profile_id: Optional[str] = None
+    sonarr_quality_profile_id: Optional[str] = None
     has_tmdb: bool = False
     has_radarr: bool = False
     has_sonarr: bool = False

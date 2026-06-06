@@ -99,14 +99,20 @@ class WatchlistService:
         if media_type == "movie":
             client = RadarrClient(settings.radarr_url, settings.radarr_api_key)
             root_folder = get_setting("radarr_root_folder")
+            quality_profile_id = get_setting("radarr_quality_profile_id")
         else:
             client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
             root_folder = get_setting("sonarr_root_folder")
+            quality_profile_id = get_setting("sonarr_quality_profile_id")
+        try:
+            quality_profile_id = int(quality_profile_id) if quality_profile_id else None
+        except (TypeError, ValueError):
+            quality_profile_id = None
 
         async def process_one(tmdb_id: int) -> tuple[int | None, dict | None]:
             try:
                 if media_type == "movie":
-                    await client.add_movie(tmdb_id, root_folder_path=root_folder)
+                    await client.add_movie(tmdb_id, quality_profile_id=quality_profile_id, root_folder_path=root_folder)
                 else:
                     item = self.get_by_tmdb_id(tmdb_id)
                     selected_seasons = None
@@ -116,7 +122,7 @@ class WatchlistService:
                     if item and item.is_season_update:
                         await client.update_season_monitoring(tmdb_id, selected_seasons)
                     else:
-                        await client.add_series(tmdb_id, root_folder_path=root_folder, selected_seasons=selected_seasons)
+                        await client.add_series(tmdb_id, quality_profile_id=quality_profile_id, root_folder_path=root_folder, selected_seasons=selected_seasons)
 
                 return (tmdb_id, None)
             except Exception as e:

@@ -28,17 +28,24 @@ class SettingsService:
             sonarr_url=self._get_plain(settings, "sonarr_url"),
             sonarr_api_key_masked=self._get_masked(settings, "sonarr_api_key"),
             sonarr_root_folder=self._get_plain(settings, "sonarr_root_folder"),
+            radarr_quality_profile_id=self._get_plain(settings, "radarr_quality_profile_id"),
+            sonarr_quality_profile_id=self._get_plain(settings, "sonarr_quality_profile_id"),
             has_tmdb="tmdb_api_key" in settings,
             has_radarr="radarr_url" in settings and "radarr_api_key" in settings,
             has_sonarr="sonarr_url" in settings and "sonarr_api_key" in settings,
         )
 
     # Keys that can be cleared (set to empty/None to delete)
-    CLEARABLE_KEYS = {"radarr_root_folder", "sonarr_root_folder"}
+    CLEARABLE_KEYS = {
+        "radarr_root_folder",
+        "sonarr_root_folder",
+        "radarr_quality_profile_id",
+        "sonarr_quality_profile_id",
+    }
 
     def update_settings(self, update: SettingsUpdate) -> None:
         """Update settings from request."""
-        data = update.model_dump()
+        data = update.model_dump(exclude_unset=True)
         for key, value in data.items():
             if value is None or value == "":
                 # For clearable keys, delete the setting when cleared

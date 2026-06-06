@@ -84,6 +84,20 @@ async def get_series_seasons(
     return result
 
 
+@router.get("/quality-profiles")
+async def get_sonarr_quality_profiles(client: SonarrClient = Depends(get_sonarr_client)):
+    """List available Sonarr quality profiles for settings dropdown."""
+    try:
+        profiles = await client.get_quality_profiles()
+        return [{"id": p["id"], "name": p["name"]} for p in profiles]
+    except TimeoutException:
+        raise HTTPException(status_code=504, detail="Sonarr request timed out")
+    except HTTPStatusError as e:
+        raise HTTPException(
+            status_code=503, detail=f"Sonarr API error: {e.response.status_code}"
+        )
+
+
 @router.get("/queue")
 async def get_sonarr_queue(client: SonarrClient = Depends(get_sonarr_client)):
     """Get current download queue from Sonarr."""

@@ -22,5 +22,19 @@ export default {
    */
   async testConnection(service) {
     return await api.post('/settings/test', { service })
+  },
+
+  /**
+   * Get available Radarr quality profiles
+   */
+  async getRadarrQualityProfiles() {
+    return await api.get('/radarr/quality-profiles')
+  },
+
+  /**
+   * Get available Sonarr quality profiles
+   */
+  async getSonarrQualityProfiles() {
+    return await api.get('/sonarr/quality-profiles')
   }
 }

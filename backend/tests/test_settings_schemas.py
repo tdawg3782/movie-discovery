@@ -45,6 +45,40 @@ def test_settings_response_masks_keys():
     assert data.has_tmdb is True
 
 
+def test_settings_update_quality_profile_defaults_none():
+    """SettingsUpdate quality profile fields default to None."""
+    data = SettingsUpdate()
+    assert data.radarr_quality_profile_id is None
+    assert data.sonarr_quality_profile_id is None
+
+
+def test_settings_update_quality_profile_set():
+    """SettingsUpdate accepts quality profile ids."""
+    data = SettingsUpdate(
+        radarr_quality_profile_id="4",
+        sonarr_quality_profile_id="7",
+    )
+    assert data.radarr_quality_profile_id == "4"
+    assert data.sonarr_quality_profile_id == "7"
+
+
+def test_settings_response_quality_profile_defaults_none():
+    """SettingsResponse quality profile fields default to None."""
+    data = SettingsResponse()
+    assert data.radarr_quality_profile_id is None
+    assert data.sonarr_quality_profile_id is None
+
+
+def test_settings_response_quality_profile_set():
+    """SettingsResponse exposes quality profile ids."""
+    data = SettingsResponse(
+        radarr_quality_profile_id="4",
+        sonarr_quality_profile_id="7",
+    )
+    assert data.radarr_quality_profile_id == "4"
+    assert data.sonarr_quality_profile_id == "7"
+
+
 def test_connection_test_request():
     """ConnectionTestRequest should validate service type."""
     data = ConnectionTestRequest(service="tmdb")
