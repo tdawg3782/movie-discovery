@@ -5,6 +5,23 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-06-06
+
+### Added
+
+- **Default Quality Profile Configuration**
+  - Choose a default Radarr/Sonarr quality profile in the Settings UI (dropdowns under each Root Folder field)
+  - New settings: `radarr_quality_profile_id` and `sonarr_quality_profile_id` (stored as plain, clearable strings)
+  - Batch-added movies/shows now use the chosen profile instead of the `*arr` API's first profile (often "Any"/"SD")
+  - Leaving a dropdown on "Use default" reverts to the auto-first-profile fallback
+  - New endpoints: `GET /api/radarr/quality-profiles` and `GET /api/sonarr/quality-profiles` to populate the dropdowns
+
+### Fixed
+
+- **Partial settings updates** no longer wipe other saved clearable settings — `update_settings` now processes only the fields the caller actually provides (`model_dump(exclude_unset=True)`); an explicit blank value still clears
+
+---
+
 ## [2.5.0] - 2026-03-28
 
 ### Changed

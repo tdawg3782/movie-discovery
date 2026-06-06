@@ -58,7 +58,7 @@ Open http://localhost:3000
 
 1. Go to **Settings** (`/settings`)
 2. Enter your API keys (TMDB required, Radarr/Sonarr optional)
-3. Optionally set **Root Folder Paths** for Radarr/Sonarr (e.g., `/movies-usb`, `/tv-usb`)
+3. Optionally set **Root Folder Paths** and a default **Quality Profile** for Radarr/Sonarr (e.g., `/movies-usb`, `/tv-usb`; leave a quality profile on "Use default" to keep the `*arr` auto profile)
 4. Click **Test** to verify each connection
 5. Click **Save**
 
@@ -182,6 +182,8 @@ movie_discovery/
 | GET | `/api/settings` | Get settings (keys masked) |
 | PUT | `/api/settings` | Update settings |
 | POST | `/api/settings/test` | Test connection |
+| GET | `/api/radarr/quality-profiles` | List Radarr quality profiles |
+| GET | `/api/sonarr/quality-profiles` | List Sonarr quality profiles |
 
 ## Docker Deployment (Synology NAS)
 

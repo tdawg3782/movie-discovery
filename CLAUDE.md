@@ -36,7 +36,7 @@ backend/src/app/
 │   ├── watchlist/    # CRUD, batch process, batch delete, season selection
 │   ├── radarr/       # Movie library: status, add, queue, recent (extends BaseArrClient)
 │   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
-│   ├── settings/     # API keys, root folder paths (encrypted storage)
+│   ├── settings/     # API keys, root folder paths, default quality profiles (encrypted keys; rest plain)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
 ├── models.py         # SQLAlchemy: Settings, Watchlist (with selected_seasons), MediaCache
