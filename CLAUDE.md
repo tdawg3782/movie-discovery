@@ -18,7 +18,7 @@
 | `frontend/Dockerfile` | Node build + nginx |
 | `frontend/nginx.conf` | Reverse proxy /api to backend |
 
-Deploy to NAS (no git installed — use `git fetch`/`reset` or `scp`):
+Deploy to NAS:
 ```bash
 ssh user@nas-ip
 cd /volume1/docker/hoveyflix
