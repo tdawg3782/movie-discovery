@@ -5,6 +5,18 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-06-06
+
+### Added
+
+- **Watchlist sort & filter**
+  - Sort the watchlist by date added, title, rating, or release date, in either direction; items missing a sort key (no rating / no release date) always sort last instead of floating to the top
+  - Filter by media type (All / Movies / TV Shows) and by status (All / Pending / In Library / Downloading); the media-type tabs are now state-driven
+  - The chosen sort and filters are mirrored into the URL query string, so the view survives a reload and the browser Back button (defaults are omitted, keeping a pristine watchlist URL clean)
+  - New pure, unit-tested `watchlistState` module (`parseWatchlistState` / `serializeWatchlistState` / `applyWatchlistView`); `WatchlistView.vue` is now thin glue over it
+
+---
+
 ## [2.7.0] - 2026-06-06
 
 ### Added

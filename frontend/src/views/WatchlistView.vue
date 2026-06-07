@@ -18,22 +18,53 @@
     <!-- Filter Tabs -->
     <div class="filter-tabs">
       <button
-        :class="['tab', { active: filter === 'all' }]"
-        @click="filter = 'all'"
+        :class="['tab', { active: mediaType === 'all' }]"
+        @click="mediaType = 'all'"
       >
         All ({{ items.length }})
       </button>
       <button
-        :class="['tab', { active: filter === 'movies' }]"
-        @click="filter = 'movies'"
+        :class="['tab', { active: mediaType === 'movies' }]"
+        @click="mediaType = 'movies'"
       >
         Movies ({{ movieCount }})
       </button>
       <button
-        :class="['tab', { active: filter === 'shows' }]"
-        @click="filter = 'shows'"
+        :class="['tab', { active: mediaType === 'shows' }]"
+        @click="mediaType = 'shows'"
       >
         TV Shows ({{ showCount }})
+      </button>
+    </div>
+
+    <!-- Sort / Filter Controls -->
+    <div class="watchlist-controls">
+      <label class="control">
+        <span class="control-label">Status</span>
+        <select v-model="status" class="control-select">
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="added">In Library</option>
+          <option value="downloading">Downloading</option>
+        </select>
+      </label>
+      <label class="control">
+        <span class="control-label">Sort by</span>
+        <select v-model="sortBy" class="control-select">
+          <option value="added">Date added</option>
+          <option value="title">Title</option>
+          <option value="rating">Rating</option>
+          <option value="release">Release date</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        class="sort-dir-toggle"
+        title="Toggle sort direction"
+        aria-label="Toggle sort direction"
+        @click="sortDir = sortDir === 'desc' ? 'asc' : 'desc'"
+      >
+        {{ sortDir === 'desc' ? '▼' : '▲' }}
       </button>
     </div>
 
@@ -227,8 +258,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { watchlistService } from '../services/watchlist'
+import { useRoute, useRouter } from 'vue-router'
+import { parseWatchlistState, serializeWatchlistState, applyWatchlistView } from '@/utils/watchlistState'
+
+const route = useRoute()
+const router = useRouter()
+const initial = parseWatchlistState(route.query)
 
 const items = ref([])
 const loading = ref(false)
@@ -237,7 +274,10 @@ const removing = ref(null)
 const processing = ref(false)
 
 const selectedItems = ref([]) // Array of {tmdb_id, media_type}
-const filter = ref('all')
+const mediaType = ref(initial.mediaType)
+const status = ref(initial.status)
+const sortBy = ref(initial.sortBy)
+const sortDir = ref(initial.sortDir)
 const showProcessModal = ref(false)
 const processResult = ref(null)
 
@@ -246,6 +286,14 @@ const expandedItem = ref(null)
 const savingSeasons = ref(false)
 // Local state for pending season changes (keyed by tmdb_id)
 const pendingSeasonChanges = ref({})
+
+function commitState() {
+  router.replace({ query: serializeWatchlistState({
+    mediaType: mediaType.value, status: status.value, sortBy: sortBy.value, sortDir: sortDir.value,
+  }) })
+}
+
+watch([mediaType, status, sortBy, sortDir], commitState)
 
 onMounted(() => {
   fetchWatchlist()
@@ -266,15 +314,9 @@ const fetchWatchlist = async () => {
   }
 }
 
-const filteredItems = computed(() => {
-  if (filter.value === 'movies') {
-    return items.value.filter(i => i.media_type === 'movie')
-  }
-  if (filter.value === 'shows') {
-    return items.value.filter(i => i.media_type === 'show')
-  }
-  return items.value
-})
+const filteredItems = computed(() => applyWatchlistView(items.value, {
+  mediaType: mediaType.value, status: status.value, sortBy: sortBy.value, sortDir: sortDir.value,
+}))
 
 const movieCount = computed(() =>
   items.value.filter(i => i.media_type === 'movie').length
@@ -612,6 +654,56 @@ function formatSeasonsSummary(item) {
 .tab.active {
   background: #222;
   border-color: #e50914;
+  color: #fff;
+}
+
+.watchlist-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.watchlist-controls .control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.watchlist-controls .control-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.watchlist-controls .control-select {
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.watchlist-controls .control-select:hover {
+  border-color: #666;
+}
+
+.sort-dir-toggle {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.sort-dir-toggle:hover {
+  border-color: #666;
   color: #fff;
 }
 

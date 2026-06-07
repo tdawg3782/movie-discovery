@@ -55,7 +55,8 @@ frontend/src/
 │                     # MediaCarousel, MediaCard, QueueItem, DownloadProgress,
 │                     # StatusBadge, SeasonSelectModal
 ├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
-├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested)
+├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested),
+│                     # watchlistState.js (URL-as-state + sort/filter for Watchlist; unit-tested)
 └── router/           # Vue Router config
 ```
 
