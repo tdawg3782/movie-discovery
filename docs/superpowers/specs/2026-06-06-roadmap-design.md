@@ -117,6 +117,8 @@ Reuse the `MediaCache` pattern if caching is wanted.
 
 ### 4. Watchlist 2.0 — priority, notes, tags, sections  *(rest of the "flat dump" itch)*
 
+**Status:** SHIPPED — v2.10.0 (2026-06-06). Watchlist items gained an editable priority (High/Normal/Low), the previously-hidden notes field, and optional tags, all editable via an inline per-item panel (movies + shows) backed by a new `PATCH /api/watchlist/{id}/details` partial-update endpoint. New "Group by priority" mode sections the list High→Normal→Low (empty sections hidden), mirrored to the URL `group` key and composed with the existing sort & filter. Backend added `priority`/`tags` columns to `Watchlist` via the project's first **idempotent additive startup migration** (`_migrate_watchlist_columns` after `create_all`) — fixes the latent "no such column" 500 risk on live DBs. Grouping/tags/priority logic lives in the pure, unit-tested `watchlistState.js`.
+
 **What:** Add a priority flag/order, surface the existing notes field, optional tags, and
 group the watchlist into sections (e.g. by priority or type).
 

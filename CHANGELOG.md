@@ -5,6 +5,19 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-06-06
+
+### Added
+
+- **Watchlist 2.0 — priority, notes, tags & priority grouping**
+  - Each watchlist item now has an editable **priority** (High / Normal / Low), an editable **notes** field (previously stored but never surfaced in the UI), and optional **tags**; an inline per-item editor (works for both movies and shows) saves all three at once
+  - New **Group by priority** mode buckets the list into High → Normal → Low sections (empty sections hidden); the grouping choice is mirrored to the URL query (`group`, default omitted) and composes with the existing sort & filter
+  - Cards now show the priority label and tag chips alongside the existing status/season info
+  - Backend: the `Watchlist` model gains `priority` (int, default 0 = Normal) and `tags` (JSON-encoded) columns, added to existing databases by a new **idempotent additive migration** run on startup — `create_all` never alters an already-existing table, so this prevents the "no such column" 500 that hit the live NAS DB when `is_season_update` was added (v2.4.1). New `PATCH /api/watchlist/{id}/details` partial-update endpoint
+  - Logic lives in the pure, unit-tested `frontend/src/utils/watchlistState.js` (`groupWatchlistView`, `priorityLabel`, `parseTagsInput` / `formatTags`); `WatchlistView.vue` stays thin glue
+
+---
+
 ## [2.9.0] - 2026-06-06
 
 ### Added

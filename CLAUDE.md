@@ -94,6 +94,7 @@ frontend/src/
 - **Batch processing** — `asyncio.gather()` (backend) and `Promise.all()` (frontend) for parallelism
 - **Client factories** — Defined once in each module's router, imported by library router
 - **Media type convention** — App uses "show" internally, converts to "tv" for TMDB API calls
+- **Additive DB migrations** — `init_db()` runs `_migrate_watchlist_columns()` (guarded, idempotent `ALTER TABLE ... ADD COLUMN`) **after** `create_all`. `create_all` only creates missing tables; it never adds columns to an existing one, so **any new column on an existing model MUST get a guarded additive migration here** — otherwise the live NAS SQLite DB 500s with "no such column" (the v2.4.1 incident).
 
 ## Environment
 
