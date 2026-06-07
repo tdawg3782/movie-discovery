@@ -13,6 +13,7 @@ from app.modules.sonarr import router as sonarr_router
 from app.modules.settings.router import router as settings_router
 from app.modules.library import router as library_router
 from app.modules.calendar import router as calendar_router
+from app.modules.recommendations import router as recommendations_router
 
 
 @asynccontextmanager
@@ -49,6 +50,7 @@ app.include_router(sonarr_router)
 app.include_router(settings_router)
 app.include_router(library_router)
 app.include_router(calendar_router)
+app.include_router(recommendations_router)
 
 
 @app.get("/health")

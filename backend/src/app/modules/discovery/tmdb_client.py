@@ -115,6 +115,11 @@ class TMDBClient:
         validated_type = self._validate_media_type(media_type)
         return await self._get(f"/{validated_type}/{tmdb_id}/similar")
 
+    async def get_recommendations(self, tmdb_id: int, media_type: str) -> dict[str, Any]:
+        """Get TMDB recommendations for a movie or show."""
+        validated_type = self._validate_media_type(media_type)
+        return await self._get(f"/{validated_type}/{tmdb_id}/recommendations")
+
     async def get_details(self, tmdb_id: int, media_type: str) -> dict[str, Any]:
         """Get movie or show details."""
         validated_type = self._validate_media_type(media_type)

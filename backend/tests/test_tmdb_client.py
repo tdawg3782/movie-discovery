@@ -163,6 +163,34 @@ async def test_get_similar_invalid_media_type(tmdb_client):
         await tmdb_client.get_similar(123, "invalid")
 
 
+# --- get_recommendations Tests ---
+
+
+@pytest.mark.asyncio
+async def test_get_recommendations_movie(tmdb_client, mock_response):
+    with patch.object(tmdb_client, "_get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        result = await tmdb_client.get_recommendations(123, "movie")
+
+    mock_get.assert_called_once_with("/movie/123/recommendations")
+    assert result["results"][0]["id"] == 123
+
+
+@pytest.mark.asyncio
+async def test_get_recommendations_tv(tmdb_client, mock_response):
+    with patch.object(tmdb_client, "_get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        result = await tmdb_client.get_recommendations(456, "tv")
+
+    mock_get.assert_called_once_with("/tv/456/recommendations")
+
+
+@pytest.mark.asyncio
+async def test_get_recommendations_invalid_media_type(tmdb_client):
+    with pytest.raises(ValueError, match="media_type must be 'movie' or 'tv'"):
+        await tmdb_client.get_recommendations(123, "invalid")
+
+
 # --- get_details Tests ---
 
 

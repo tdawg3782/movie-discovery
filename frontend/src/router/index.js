@@ -7,6 +7,7 @@ import PersonView from '../views/PersonView.vue'
 import CollectionView from '../views/CollectionView.vue'
 import LibraryView from '../views/LibraryView.vue'
 import CalendarView from '../views/CalendarView.vue'
+import ForYouView from '../views/ForYouView.vue'
 
 const routes = [
   {
@@ -55,6 +56,11 @@ const routes = [
     path: '/calendar',
     name: 'calendar',
     component: CalendarView
+  },
+  {
+    path: '/for-you',
+    name: 'for-you',
+    component: ForYouView
   }
 ]
 
