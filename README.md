@@ -10,7 +10,7 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 |---------|-------------|
 | **Discovery** | Browse trending movies and shows, filter by genre/year/rating |
 | **Search** | Find any movie or TV show |
-| **Detail Pages** | View trailers, cast, recommendations, collections |
+| **Detail Pages** | View trailers, cast, recommendations, collections, and streaming availability ("Where to Watch") |
 | **Person Pages** | Browse actor/director filmographies |
 | **Watchlist** | Stage items before adding to library (sort & filter, batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
@@ -61,8 +61,9 @@ Open http://localhost:3000
 1. Go to **Settings** (`/settings`)
 2. Enter your API keys (TMDB required, Radarr/Sonarr optional)
 3. Optionally set **Root Folder Paths** and a default **Quality Profile** for Radarr/Sonarr (e.g., `/movies-usb`, `/tv-usb`; leave a quality profile on "Use default" to keep the `*arr` auto profile)
-4. Click **Test** to verify each connection
-5. Click **Save**
+4. Optionally set a **Streaming Region** under *Streaming Availability* (two-letter country code, e.g. `US`, `GB`, `CA`; leave empty to default to US) to control which region's "Where to Watch" providers appear on detail pages
+5. Click **Test** to verify each connection
+6. Click **Save**
 
 Alternatively, create `.env` in the project root:
 

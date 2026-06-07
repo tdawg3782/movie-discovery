@@ -5,6 +5,20 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-06-06
+
+### Added
+
+- **Streaming availability ("Where to Watch") on detail pages**
+  - Movie and show detail pages now show where the title can be streamed for a configurable region, so you can decide whether to download it or just stream it
+  - Providers come from TMDB and piggyback on the existing detail request (no extra API call); only subscription (`flatrate`) and free/ad-supported services are shown — pay-per-title rent/buy are excluded — and duplicates are merged
+  - When a region has no providers, the section is simply hidden (no error)
+  - New `streaming_region` setting (two-letter country code, default `US`, editable in Settings; leave empty to revert to US)
+  - New presentational `WatchProviders.vue` component renders the provider logos linking out to TMDB's watch page
+  - Scope note: the poster-badge surface mentioned in the roadmap was deferred (TMDB list endpoints carry no provider data, so a badge would cost one extra call per card) and remains a backlog idea
+
+---
+
 ## [2.8.0] - 2026-06-06
 
 ### Added

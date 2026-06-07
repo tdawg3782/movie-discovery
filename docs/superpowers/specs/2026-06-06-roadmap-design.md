@@ -93,6 +93,8 @@ reload.
 
 ### 3. Streaming-availability badges
 
+**Status:** SHIPPED — v2.9.0 (2026-06-06). Detail pages (movie + show) now list streaming providers for a configurable region via a new top-level `watch_providers` field; data piggybacks on the existing detail request (`append_to_response=...,watch/providers`, no extra HTTP call). "Streamable" = `flatrate` + (`free`+`ads`), deduped, with `rent`/`buy` excluded; the raw all-regions blob is stripped. New `streaming_region` setting (plain/clearable, default US) editable in Settings. UI: new `frontend/src/components/WatchProviders.vue` rendered on `MediaDetailView` (hidden when no providers). Scope note: the poster-badge surface was deliberately deferred (TMDB list endpoints carry no provider data → one extra call per card) and remains a backlog idea.
+
 **What:** Show where a title can be streamed (region-aware) on detail pages and as a small
 poster badge, so the user can tell whether to download it or just stream it.
 
