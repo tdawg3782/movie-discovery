@@ -2,6 +2,8 @@
 
 A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, filter, and add content to your media server.
 
+> **Deployment note:** The standard, canonical installation for this project is the Dockerized stack running on the owner's Synology NAS (`hoveyflix`, behind a Cloudflare tunnel). The local Python/Node "Quick Start" below is for development only. See [Docker Deployment](#docker-deployment-synology-nas).
+
 ## Features
 
 | Feature | Description |

@@ -1,5 +1,7 @@
 # Movie Discovery App
 
+> **Standard install = NAS Docker.** The canonical deployment of this app is the Dockerized `hoveyflix` stack on the Synology NAS (behind a Cloudflare tunnel), **not** local dev. **When the user says "rebuild", it means: deploy to the NAS** via the [Docker Deployment](#docker-deployment) steps below (ship `git archive HEAD` → `docker-compose up -d --build`). Go straight to it — do not ask which target, and do not rebuild a local Docker stack.
+
 ## Commands
 
 | Command | Description |
@@ -25,11 +27,11 @@ ship the committed tree from a machine that has git, then build with the **legac
 and `data/` (the SQLite DB) are left untouched:
 ```bash
 # From the repo root on a machine with git:
-git archive --format=tar HEAD | ssh user@nas-ip "tar -xf - -C /volume1/docker/hoveyflix"
+git archive --format=tar HEAD | ssh "Troy Hovey@192.168.1.104" "tar -xf - -C /volume1/docker/hoveyflix"
 
 # On the NAS — docker works without sudo; DOCKER_BUILDKIT=0 avoids the buildx
 # permission error on the root-owned ~/.docker/buildx:
-ssh user@nas-ip "cd /volume1/docker/hoveyflix && DOCKER_BUILDKIT=0 /usr/local/bin/docker-compose up -d --build"
+ssh "Troy Hovey@192.168.1.104" "cd /volume1/docker/hoveyflix && DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 /usr/local/bin/docker-compose up -d --build"
 ```
 
 ## Project Structure
