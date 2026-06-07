@@ -8,6 +8,7 @@
 | `stop.bat` | Stop all servers |
 | `cd backend && pytest -v` | Run tests |
 | `cd backend && pytest --cov=app` | Tests with coverage |
+| `cd frontend && npm run test` | Run frontend unit tests (Vitest) |
 
 ## Docker Deployment
 

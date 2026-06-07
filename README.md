@@ -78,8 +78,11 @@ SONARR_API_KEY=your_key
 
 1. Browse trending on the **Discover** page
 2. Use **Filters** to narrow by genre, year, rating
-3. Click any poster to view details
-4. Click **+** to add to your watchlist (TV shows prompt for season selection)
+3. Page through results with **Prev / Next** (each page replaces the current results)
+4. Click any poster to view details
+5. Click **+** to add to your watchlist (TV shows prompt for season selection)
+
+Your active tab, page, search, and filters are saved in the page URL, so reloading or using the browser **Back** button (for example, returning from a detail page) takes you back to exactly where you were.
 
 ### Adding to Library
 

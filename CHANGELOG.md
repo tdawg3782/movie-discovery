@@ -5,6 +5,23 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-06-06
+
+### Added
+
+- **Paginated Discover with restored position**
+  - Numbered page navigation (Prev / "Page X of Y" / Next) replaces the "Load More" button on the Discover page
+  - Active tab, page, search query, and filters are mirrored into the URL query string; a reload or the browser Back button (e.g. from a detail page) restores the exact tab, page, search, and filter chips
+  - New `PaginationControls` component plus a pure, unit-tested `discoverState` URL-state module (`parseDiscoverState` / `serializeDiscoverState` / `clampPage`)
+  - Added a Vitest test harness for the frontend (`npm run test`)
+
+### Changed
+
+- **Discover feed no longer appends pages** — each page replaces the previous results; switching tabs clears the media-type-specific genre filter so the URL, API request, and filter panel stay in sync
+- Known limitation (unchanged): the In Library / Not in Library filters still run client-side per page, so paginated pages can look unevenly filled (server-side library filtering remains a backlog item)
+
+---
+
 ## [2.6.0] - 2026-06-06
 
 ### Added

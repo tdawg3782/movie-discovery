@@ -42,6 +42,8 @@ This roadmap captures the agreed direction for the next chapter of features.
 
 ### 1. Paginated browsing with restored position  *(top user itch)*
 
+**Status:** SHIPPED — v2.7.0 (2026-06-06). Numbered Prev/Next replaces Load-More; activeTab/page/search/filters mirrored to the URL and restored on reload/back (results + FilterPanel chips). Pure unit-tested `frontend/src/utils/discoverState.js` + Vitest harness added. Known limitation carried to backlog: `inLibrary`/`notInLibrary` still filter client-side per page (server-side filtering remains a backlog item).
+
 **What:** Replace the load-more/infinite append on Discover with numbered page
 navigation (Prev/Next + page numbers). Persist the active tab, page, search query, and
 filters in the URL query string so a reload — or the back button from a detail page —
