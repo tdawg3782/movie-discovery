@@ -53,6 +53,8 @@ class WatchlistItem(MediaBase):
     status: str = "pending"  # pending, added, downloading
     selected_seasons: list[int] | None = None  # None = all seasons
     total_seasons: int | None = None  # For display: "X of Y seasons"
+    priority: int = 0  # 1=High, 0=Normal, -1=Low
+    tags: list[str] = []
 
 
 class WatchlistResponse(BaseModel):

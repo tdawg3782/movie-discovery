@@ -3,6 +3,10 @@ import {
   parseWatchlistState,
   serializeWatchlistState,
   applyWatchlistView,
+  groupWatchlistView,
+  priorityLabel,
+  parseTagsInput,
+  formatTags,
 } from './watchlistState.js'
 
 const defaultState = {
@@ -10,6 +14,7 @@ const defaultState = {
   status: 'all',
   sortBy: 'added',
   sortDir: 'desc',
+  groupBy: 'none',
 }
 
 describe('parseWatchlistState', () => {
@@ -24,7 +29,7 @@ describe('parseWatchlistState', () => {
   it('coerces a fully populated query', () => {
     expect(
       parseWatchlistState({ type: 'shows', status: 'pending', sort: 'rating', dir: 'asc' }),
-    ).toEqual({ mediaType: 'shows', status: 'pending', sortBy: 'rating', sortDir: 'asc' })
+    ).toEqual({ mediaType: 'shows', status: 'pending', sortBy: 'rating', sortDir: 'asc', groupBy: 'none' })
   })
 
   it('falls back to defaults for garbage values', () => {
@@ -39,6 +44,17 @@ describe('serializeWatchlistState', () => {
     expect(serializeWatchlistState(parseWatchlistState({}))).toEqual({})
   })
 
+  it('omits group when state lacks a groupBy field (no group=undefined)', () => {
+    expect(
+      serializeWatchlistState({
+        mediaType: 'all',
+        status: 'all',
+        sortBy: 'added',
+        sortDir: 'desc',
+      }),
+    ).toEqual({})
+  })
+
   it('includes only the non-default keys as strings', () => {
     expect(
       serializeWatchlistState({
@@ -46,6 +62,7 @@ describe('serializeWatchlistState', () => {
         status: 'pending',
         sortBy: 'rating',
         sortDir: 'asc',
+        groupBy: 'none',
       }),
     ).toEqual({ type: 'shows', status: 'pending', sort: 'rating', dir: 'asc' })
   })
@@ -232,5 +249,97 @@ describe('applyWatchlistView', () => {
     // present items first by rating (d=8, b=5), then missing 'a','c' in ORIGINAL relative order.
     // Direct array comparison (NOT order-agnostic) to catch a stability regression.
     expect(out.map((i) => i.id)).toEqual(['d', 'b', 'a', 'c'])
+  })
+})
+
+describe('groupBy state', () => {
+  it('parses group=priority', () => {
+    expect(parseWatchlistState({ group: 'priority' }).groupBy).toBe('priority')
+  })
+
+  it('defaults groupBy to none and omits it from serialize', () => {
+    expect(parseWatchlistState({}).groupBy).toBe('none')
+    expect(serializeWatchlistState(parseWatchlistState({}))).toEqual({})
+  })
+
+  it('serializes a non-default groupBy to group', () => {
+    expect(serializeWatchlistState(parseWatchlistState({ group: 'priority' }))).toEqual({
+      group: 'priority',
+    })
+  })
+
+  it('falls back to none for a garbage group', () => {
+    expect(parseWatchlistState({ group: 'bogus' }).groupBy).toBe('none')
+  })
+})
+
+describe('priorityLabel', () => {
+  it('maps known priorities to labels', () => {
+    expect(priorityLabel(1)).toBe('High')
+    expect(priorityLabel(0)).toBe('Normal')
+    expect(priorityLabel(-1)).toBe('Low')
+  })
+
+  it('falls back to Normal for unknown priorities', () => {
+    expect(priorityLabel(5)).toBe('Normal')
+  })
+})
+
+describe('parseTagsInput / formatTags', () => {
+  it('splits, trims, drops empties, and dedupes preserving first-seen order', () => {
+    expect(parseTagsInput('a, b ,a, ,c')).toEqual(['a', 'b', 'c'])
+  })
+
+  it('returns an empty array for an empty string', () => {
+    expect(parseTagsInput('')).toEqual([])
+  })
+
+  it('formats tags back to a comma-separated string', () => {
+    expect(formatTags(['a', 'b'])).toBe('a, b')
+  })
+})
+
+describe('groupWatchlistView', () => {
+  const items = [
+    { id: 1, media_type: 'movie', priority: 1, vote_average: 5, status: 'pending', added_at: '2026-01-01T00:00:00Z' },
+    { id: 2, media_type: 'movie', priority: 0, vote_average: 9, status: 'pending', added_at: '2026-02-01T00:00:00Z' },
+    { id: 3, media_type: 'movie', priority: -1, vote_average: 7, status: 'pending', added_at: '2026-03-01T00:00:00Z' },
+    { id: 4, media_type: 'show', priority: 1, vote_average: 8, status: 'added', added_at: '2026-04-01T00:00:00Z' },
+    { id: 5, media_type: 'movie', vote_average: 6, status: 'pending', added_at: '2026-05-01T00:00:00Z' },
+  ]
+
+  it('buckets into High -> Normal -> Low order with labels', () => {
+    const sections = groupWatchlistView(items, defaultState)
+    expect(sections.map((s) => [s.key, s.label])).toEqual([
+      [1, 'High'],
+      [0, 'Normal'],
+      [-1, 'Low'],
+    ])
+  })
+
+  it('places items without a priority in the Normal (0) section', () => {
+    const sections = groupWatchlistView(items, defaultState)
+    const normal = sections.find((s) => s.key === 0)
+    expect(normal.items.map((i) => i.id)).toContain(5)
+  })
+
+  it('preserves the active sort within each section', () => {
+    const sections = groupWatchlistView(items, { ...defaultState, sortBy: 'rating', sortDir: 'asc' })
+    const byKey = Object.fromEntries(sections.map((s) => [s.key, s.items.map((i) => i.id)]))
+    expect(byKey[1]).toEqual([1, 4])
+    expect(byKey[0]).toEqual([5, 2])
+    expect(byKey[-1]).toEqual([3])
+  })
+
+  it('applies the active media filter within each section', () => {
+    const sections = groupWatchlistView(items, { ...defaultState, mediaType: 'movies' })
+    const high = sections.find((s) => s.key === 1)
+    expect(high.items.map((i) => i.id)).toEqual([1])
+  })
+
+  it('omits empty sections after filtering', () => {
+    const sections = groupWatchlistView(items, { ...defaultState, status: 'added' })
+    expect(sections.map((s) => s.key)).toEqual([1])
+    expect(sections[0].items.map((i) => i.id)).toEqual([4])
   })
 })

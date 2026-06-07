@@ -66,6 +66,13 @@
       >
         {{ sortDir === 'desc' ? '▼' : '▲' }}
       </button>
+      <label class="control">
+        <span class="control-label">Group by</span>
+        <select v-model="groupBy" class="control-select">
+          <option value="none">None</option>
+          <option value="priority">Priority</option>
+        </select>
+      </label>
     </div>
 
     <div v-if="loading" class="loading">Loading watchlist...</div>
@@ -94,9 +101,17 @@
       </div>
 
       <!-- Watchlist Items -->
-      <div class="watchlist-grid">
+      <div
+        v-for="section in displaySections"
+        :key="section.key"
+        class="watchlist-section"
+      >
+        <h3 v-if="section.label" class="priority-section-header">
+          {{ section.label }} ({{ section.items.length }})
+        </h3>
+        <div class="watchlist-grid">
         <div
-          v-for="item in filteredItems"
+          v-for="item in section.items"
           :key="item.id"
           :class="['watchlist-item-wrapper', { expanded: isExpanded(item.tmdb_id) }]"
         >
@@ -136,12 +151,18 @@
               <div class="item-meta">
                 <span class="media-type">{{ item.media_type === 'movie' ? 'Movie' : 'TV Show' }}</span>
                 <span :class="['status-badge', item.status]">{{ formatStatus(item.status) }}</span>
+                <span class="priority-badge">{{ priorityLabel(item.priority) }}</span>
                 <span
                   v-if="item.media_type === 'show' && item.total_seasons"
                   :class="['seasons-summary', { 'is-update': item.is_season_update }]"
                 >
                   {{ formatSeasonsSummary(item) }}
                 </span>
+                <span
+                  v-for="t in (item.tags || [])"
+                  :key="t"
+                  class="tag-chip"
+                >{{ t }}</span>
               </div>
               <div v-if="item.notes" class="item-notes">{{ item.notes }}</div>
               <div class="item-date">Added {{ formatDate(item.added_at) }}</div>
@@ -155,6 +176,13 @@
                 :title="isExpanded(item.tmdb_id) ? 'Collapse' : 'Edit Seasons'"
               >
                 <span :class="['expand-icon', { rotated: isExpanded(item.tmdb_id) }]">&#9660;</span>
+              </button>
+              <button
+                class="btn-edit-details"
+                @click.stop="editingId === item.id ? closeDetailsEditor() : openDetailsEditor(item)"
+                :title="editingId === item.id ? 'Close editor' : 'Edit details'"
+              >
+                &#9998;
               </button>
               <button
                 v-if="item.status === 'pending'"
@@ -211,8 +239,48 @@
               </button>
             </div>
           </div>
+
+          <!-- Inline Details Editor (priority / notes / tags) -->
+          <div v-if="editingId === item.id" class="details-editor">
+            <div class="details-field">
+              <label class="details-label">Priority</label>
+              <select v-model.number="detailsForm.priority" class="control-select">
+                <option :value="1">High</option>
+                <option :value="0">Normal</option>
+                <option :value="-1">Low</option>
+              </select>
+            </div>
+            <div class="details-field">
+              <label class="details-label">Notes</label>
+              <textarea
+                v-model="detailsForm.notes"
+                class="details-textarea"
+                rows="3"
+                placeholder="Notes"
+              ></textarea>
+            </div>
+            <div class="details-field">
+              <label class="details-label">Tags</label>
+              <input
+                v-model="detailsForm.tagsInput"
+                class="details-input"
+                placeholder="comma, separated, tags"
+              />
+            </div>
+            <div class="details-actions">
+              <button class="btn-cancel-details" @click="closeDetailsEditor">Cancel</button>
+              <button
+                class="btn-save-details"
+                @click="saveDetails(item)"
+                :disabled="savingDetails"
+              >
+                {{ savingDetails ? 'Saving...' : 'Save' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+        </div>
     </template>
 
     <!-- Process Modal -->
@@ -261,7 +329,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { watchlistService } from '../services/watchlist'
 import { useRoute, useRouter } from 'vue-router'
-import { parseWatchlistState, serializeWatchlistState, applyWatchlistView } from '@/utils/watchlistState'
+import { parseWatchlistState, serializeWatchlistState, applyWatchlistView, groupWatchlistView, priorityLabel, parseTagsInput, formatTags } from '@/utils/watchlistState'
 
 const route = useRoute()
 const router = useRouter()
@@ -278,6 +346,7 @@ const mediaType = ref(initial.mediaType)
 const status = ref(initial.status)
 const sortBy = ref(initial.sortBy)
 const sortDir = ref(initial.sortDir)
+const groupBy = ref(initial.groupBy)
 const showProcessModal = ref(false)
 const processResult = ref(null)
 
@@ -287,13 +356,20 @@ const savingSeasons = ref(false)
 // Local state for pending season changes (keyed by tmdb_id)
 const pendingSeasonChanges = ref({})
 
+// Per-item details editor state (keyed by item.id, distinct from the
+// season expand which is keyed by tmdb_id).
+const editingId = ref(null)
+const detailsForm = ref({ priority: 0, notes: '', tagsInput: '' })
+const savingDetails = ref(false)
+
 function commitState() {
   router.replace({ query: serializeWatchlistState({
     mediaType: mediaType.value, status: status.value, sortBy: sortBy.value, sortDir: sortDir.value,
+    groupBy: groupBy.value,
   }) })
 }
 
-watch([mediaType, status, sortBy, sortDir], commitState)
+watch([mediaType, status, sortBy, sortDir, groupBy], commitState)
 
 onMounted(() => {
   fetchWatchlist()
@@ -317,6 +393,15 @@ const fetchWatchlist = async () => {
 const filteredItems = computed(() => applyWatchlistView(items.value, {
   mediaType: mediaType.value, status: status.value, sortBy: sortBy.value, sortDir: sortDir.value,
 }))
+
+// Unified section list so the template has a single card-rendering block.
+// Flat mode yields one label-less section; priority mode yields ordered
+// High -> Normal -> Low sections (empty omitted) from groupWatchlistView.
+const displaySections = computed(() => {
+  const state = { mediaType: mediaType.value, status: status.value, sortBy: sortBy.value, sortDir: sortDir.value, groupBy: groupBy.value }
+  if (groupBy.value === 'priority') return groupWatchlistView(items.value, state)
+  return [{ key: 'all', label: null, items: filteredItems.value }]
+})
 
 const movieCount = computed(() =>
   items.value.filter(i => i.media_type === 'movie').length
@@ -569,6 +654,38 @@ function formatSeasonsSummary(item) {
     return 'All seasons'
   }
   return `${selected.length} of ${total} seasons`
+}
+
+// Per-item details editor (priority / notes / tags) — works for movies and shows.
+function openDetailsEditor(item) {
+  editingId.value = item.id
+  detailsForm.value = {
+    priority: item.priority ?? 0,
+    notes: item.notes || '',
+    tagsInput: formatTags(item.tags || []),
+  }
+}
+
+function closeDetailsEditor() {
+  editingId.value = null
+}
+
+async function saveDetails(item) {
+  savingDetails.value = true
+  try {
+    await watchlistService.updateDetails(item.id, {
+      priority: detailsForm.value.priority,
+      notes: detailsForm.value.notes,
+      tags: parseTagsInput(detailsForm.value.tagsInput),
+    })
+    await fetchWatchlist()
+    editingId.value = null
+  } catch (err) {
+    console.error('Failed to update details:', err)
+    alert(err.response?.data?.detail || 'Failed to update details')
+  } finally {
+    savingDetails.value = false
+  }
 }
 </script>
 
@@ -1214,6 +1331,142 @@ function formatSeasonsSummary(item) {
 
   .season-label {
     font-size: 12px;
+  }
+}
+
+/* Priority sections */
+.priority-section-header {
+  margin: 16px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.watchlist-section:first-child .priority-section-header {
+  margin-top: 0;
+}
+
+/* Priority badge + tag chips on cards */
+.priority-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(233, 69, 96, 0.15);
+  color: #e94560;
+  text-transform: uppercase;
+}
+
+.tag-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #2a2a3a;
+  color: #aaa;
+}
+
+/* Inline details editor panel */
+.details-editor {
+  padding: 16px 16px 16px 130px;
+  background: #252540;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.details-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.details-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.details-textarea,
+.details-input {
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.details-textarea:focus,
+.details-input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.details-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-edit-details {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: all 0.2s;
+}
+
+.btn-edit-details:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.btn-save-details {
+  padding: 8px 20px;
+  background: #e94560;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-save-details:hover:not(:disabled) {
+  background: #f05f7a;
+}
+
+.btn-save-details:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-cancel-details {
+  padding: 8px 20px;
+  background: transparent;
+  border: 1px solid #666;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-cancel-details:hover {
+  border-color: #888;
+}
+
+@media (max-width: 600px) {
+  .details-editor {
+    padding: 16px;
   }
 }
 </style>

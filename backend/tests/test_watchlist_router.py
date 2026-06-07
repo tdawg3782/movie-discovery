@@ -142,3 +142,42 @@ def test_add_to_watchlist_with_is_season_update(db):
     item = db.query(Watchlist).filter_by(tmdb_id=1396).first()
     assert item is not None
     assert item.is_season_update is True
+
+
+def test_update_details_sets_priority_and_notes(client):
+    """PATCH details with priority+notes returns 200 and applies both."""
+    add = client.post("/api/watchlist", json={"tmdb_id": 555, "media_type": "movie"})
+    item_id = add.json()["id"]
+    response = client.patch(f"/api/watchlist/{item_id}/details", json={"priority": 1, "notes": "soon"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["priority"] == 1
+    assert data["notes"] == "soon"
+
+
+def test_update_details_partial_preserves_priority(client):
+    """Follow-up PATCH with only tags preserves prior priority."""
+    add = client.post("/api/watchlist", json={"tmdb_id": 556, "media_type": "movie"})
+    item_id = add.json()["id"]
+    client.patch(f"/api/watchlist/{item_id}/details", json={"priority": 1, "notes": "soon"})
+    response = client.patch(f"/api/watchlist/{item_id}/details", json={"tags": ["docu"]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["priority"] == 1
+    assert data["tags"] == ["docu"]
+
+
+def test_update_details_unknown_id_returns_404(client):
+    """PATCH details for unknown id returns 404."""
+    response = client.patch("/api/watchlist/99999/details", json={"priority": 1})
+    assert response.status_code == 404
+
+
+def test_get_watchlist_items_include_priority_and_tags(client):
+    """GET items carry priority and tags keys."""
+    client.post("/api/watchlist", json={"tmdb_id": 557, "media_type": "movie"})
+    response = client.get("/api/watchlist")
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert "priority" in item
+    assert "tags" in item

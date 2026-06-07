@@ -12,7 +12,7 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 | **Search** | Find any movie or TV show |
 | **Detail Pages** | View trailers, cast, recommendations, collections, and streaming availability ("Where to Watch") |
 | **Person Pages** | Browse actor/director filmographies |
-| **Watchlist** | Stage items before adding to library (sort & filter, batch processing, season selection) |
+| **Watchlist** | Stage items before adding to library (priority, notes, tags, group by priority, sort & filter, batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
 | **Settings** | Configure API keys via UI |
 
@@ -170,6 +170,7 @@ movie_discovery/
 | POST | `/api/watchlist` | Add item (with optional selected_seasons) |
 | DELETE | `/api/watchlist/{id}` | Remove item |
 | PATCH | `/api/watchlist/{tmdb_id}/seasons` | Update selected seasons |
+| PATCH | `/api/watchlist/{id}/details` | Update priority / notes / tags |
 | POST | `/api/watchlist/process` | Batch add to library |
 | DELETE | `/api/watchlist/batch` | Batch delete |
 

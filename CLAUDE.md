@@ -41,13 +41,13 @@ backend/src/app/
 ├── modules/
 │   ├── arr_base.py   # BaseArrClient: shared HTTP client for Radarr/Sonarr
 │   ├── discovery/    # TMDB: trending, search, filters, details, person, collection
-│   ├── watchlist/    # CRUD, batch process, batch delete, season selection
+│   ├── watchlist/    # CRUD, batch process, batch delete, season selection, details (priority/notes/tags)
 │   ├── radarr/       # Movie library: status, add, queue, recent (extends BaseArrClient)
 │   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
 │   ├── settings/     # API keys, root folder paths, default quality profiles, streaming_region (region for streaming-availability lookups, default US) (encrypted keys; rest plain)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
-├── models.py         # SQLAlchemy: Settings, Watchlist (with selected_seasons), MediaCache
+├── models.py         # SQLAlchemy: Settings, Watchlist (selected_seasons, priority, tags), MediaCache
 └── main.py           # FastAPI app
 
 frontend/src/
@@ -58,7 +58,7 @@ frontend/src/
 │                     # StatusBadge, SeasonSelectModal, WatchProviders
 ├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
 ├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested),
-│                     # watchlistState.js (URL-as-state + sort/filter for Watchlist; unit-tested)
+│                     # watchlistState.js (URL-as-state + sort/filter + priority grouping + tags helpers for Watchlist; unit-tested)
 └── router/           # Vue Router config
 ```
 
@@ -68,7 +68,7 @@ frontend/src/
 |------|---------|
 | `backend/src/app/modules/arr_base.py` | BaseArrClient: persistent httpx client, `_get`/`_post`/`_put` |
 | `backend/src/app/modules/discovery/tmdb_client.py` | All TMDB API calls (`_get_or_none` for 404 handling) |
-| `backend/src/app/modules/watchlist/router.py` | `_enrich_watchlist_item()`, `_parse_seasons()` shared helpers |
+| `backend/src/app/modules/watchlist/router.py` | `_enrich_watchlist_item()`, `_parse_seasons()`, `_parse_tags()` / `update_details` shared helpers |
 | `backend/src/app/modules/watchlist/service.py` | Watchlist CRUD + parallel batch processing |
 | `backend/src/app/modules/sonarr/client.py` | Sonarr API with season monitoring |
 | `frontend/src/components/SeasonSelectModal.vue` | TV show season picker (with status display) |

@@ -1,6 +1,7 @@
 """Watchlist API routes."""
 import asyncio
 import json
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -15,6 +16,12 @@ from .schemas import BatchProcessRequest, BatchProcessResponse, BatchDeleteReque
 
 class UpdateSeasonsRequest(BaseModel):
     selected_seasons: list[int] | None
+
+
+class UpdateDetailsRequest(BaseModel):
+    priority: Literal[-1, 0, 1] | None = None
+    notes: str | None = None
+    tags: list[str] | None = None
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
@@ -31,6 +38,17 @@ def _parse_seasons(raw: str | None) -> list[int] | None:
         return json.loads(raw)
     except json.JSONDecodeError:
         return None
+
+
+def _parse_tags(raw: str | None) -> list[str]:
+    """Parse JSON-encoded tags string, returning [] on null/garbage."""
+    if not raw:
+        return []
+    try:
+        result = json.loads(raw)
+        return result if isinstance(result, list) else []
+    except json.JSONDecodeError:
+        return []
 
 
 async def _enrich_watchlist_item(item, tmdb: TMDBClient) -> WatchlistItem:
@@ -59,6 +77,8 @@ async def _enrich_watchlist_item(item, tmdb: TMDBClient) -> WatchlistItem:
             status=item.status,
             selected_seasons=selected_seasons,
             total_seasons=total_seasons,
+            priority=item.priority,
+            tags=_parse_tags(item.tags),
         )
     except Exception:
         return WatchlistItem(
@@ -71,6 +91,8 @@ async def _enrich_watchlist_item(item, tmdb: TMDBClient) -> WatchlistItem:
             status=item.status,
             selected_seasons=selected_seasons,
             total_seasons=None,
+            priority=item.priority,
+            tags=_parse_tags(item.tags),
         )
 
 
@@ -136,6 +158,17 @@ async def update_watchlist_seasons(
         raise HTTPException(status_code=404, detail="Item not found")
 
     return {"success": True, "selected_seasons": _parse_seasons(item.selected_seasons)}
+
+
+@router.patch("/{item_id}/details")
+async def update_watchlist_details(item_id: int, data: UpdateDetailsRequest,
+                                   service: WatchlistService = Depends(get_service)):
+    fields = data.model_dump(exclude_unset=True)
+    item = service.update_details(item_id, fields)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
+    return await _enrich_watchlist_item(item, tmdb)
 
 
 # Parameterized endpoint must come AFTER specific endpoints

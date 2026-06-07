@@ -61,3 +61,38 @@ def test_add_without_seasons_stores_null(service):
     """Service stores None when no seasons specified."""
     item = service.add(tmdb_id=12345, media_type="show")
     assert item.selected_seasons is None
+
+
+def test_update_details_priority_only(service):
+    """Setting only priority leaves notes/tags untouched."""
+    item = service.add(tmdb_id=111, media_type="movie", notes="keep me")
+    updated = service.update_details(item.id, {"priority": 1})
+    assert updated.priority == 1
+    assert updated.notes == "keep me"
+    assert updated.tags is None
+
+
+def test_update_details_notes(service):
+    """Setting notes updates only notes."""
+    item = service.add(tmdb_id=222, media_type="movie")
+    updated = service.update_details(item.id, {"notes": "soon"})
+    assert updated.notes == "soon"
+
+
+def test_update_details_tags_stored_as_json(service):
+    """Populated tags stored as JSON string."""
+    item = service.add(tmdb_id=333, media_type="movie")
+    updated = service.update_details(item.id, {"tags": ["a", "b"]})
+    assert updated.tags == '["a", "b"]'
+
+
+def test_update_details_empty_tags_stored_null(service):
+    """Empty tags list stored as None."""
+    item = service.add(tmdb_id=444, media_type="movie")
+    updated = service.update_details(item.id, {"tags": []})
+    assert updated.tags is None
+
+
+def test_update_details_unknown_id_returns_none(service):
+    """Unknown item_id returns None."""
+    assert service.update_details(99999, {"priority": 1}) is None

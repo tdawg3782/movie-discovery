@@ -52,6 +52,10 @@ class Watchlist(Base):
     # JSON array like "[1, 2, 3]" or null for all seasons
     is_season_update: Mapped[bool] = mapped_column(Boolean, default=False)
     # True when adding seasons to existing show in Sonarr
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    # 1=High, 0=Normal (default), -1=Low
+    tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # JSON array of strings, or null
 
     __table_args__ = (
         {"sqlite_autoincrement": True},

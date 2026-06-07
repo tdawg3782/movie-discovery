@@ -6,12 +6,14 @@ const DEFAULTS = {
   status: 'all',
   sortBy: 'added',
   sortDir: 'desc',
+  groupBy: 'none',
 }
 
 const MEDIA_TYPES = ['all', 'movies', 'shows']
 const STATUSES = ['all', 'pending', 'added', 'downloading']
 const SORT_BYS = ['added', 'title', 'rating', 'release']
 const SORT_DIRS = ['asc', 'desc']
+const GROUP_BYS = ['none', 'priority']
 
 function oneOf(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback
@@ -24,6 +26,7 @@ export function parseWatchlistState(query) {
     status: oneOf(q.status, STATUSES, DEFAULTS.status),
     sortBy: oneOf(q.sort, SORT_BYS, DEFAULTS.sortBy),
     sortDir: oneOf(q.dir, SORT_DIRS, DEFAULTS.sortDir),
+    groupBy: oneOf(q.group, GROUP_BYS, DEFAULTS.groupBy),
   }
 }
 
@@ -33,6 +36,8 @@ export function serializeWatchlistState(state) {
   if (state.status !== DEFAULTS.status) out.status = String(state.status)
   if (state.sortBy !== DEFAULTS.sortBy) out.sort = String(state.sortBy)
   if (state.sortDir !== DEFAULTS.sortDir) out.dir = String(state.sortDir)
+  const groupBy = state.groupBy ?? DEFAULTS.groupBy
+  if (groupBy !== DEFAULTS.groupBy) out.group = String(groupBy)
   return out
 }
 
@@ -98,5 +103,50 @@ export function applyWatchlistView(items, state) {
   }
 
   out.sort(comparatorFor(state))
+  return out
+}
+
+export const PRIORITY_LABELS = { 1: 'High', 0: 'Normal', '-1': 'Low' }
+
+export function priorityLabel(p) {
+  return PRIORITY_LABELS[p] ?? 'Normal'
+}
+
+export function parseTagsInput(str) {
+  const seen = new Set()
+  const out = []
+  for (const raw of String(str ?? '').split(',')) {
+    const tag = raw.trim()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+  }
+  return out
+}
+
+export function formatTags(arr) {
+  return arr.join(', ')
+}
+
+// Filter + sort via applyWatchlistView, then bucket into priority sections
+// (High -> Normal -> Low), preserving the sort order within each and omitting
+// empty sections. Items without a `priority` fall into the Normal (0) section.
+export function groupWatchlistView(items, state) {
+  const sorted = applyWatchlistView(items, state)
+  const buckets = new Map([
+    [1, []],
+    [0, []],
+    [-1, []],
+  ])
+  for (const item of sorted) {
+    const bucket = buckets.get(item.priority ?? 0) ?? buckets.get(0)
+    bucket.push(item)
+  }
+  const out = []
+  for (const key of [1, 0, -1]) {
+    const sectionItems = buckets.get(key)
+    if (sectionItems.length === 0) continue
+    out.push({ key, label: priorityLabel(key), items: sectionItems })
+  }
   return out
 }

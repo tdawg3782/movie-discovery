@@ -69,6 +69,22 @@ class WatchlistService:
         self.db.refresh(item)
         return item
 
+    def update_details(self, item_id: int, fields: dict) -> Watchlist | None:
+        """Partial update of priority / notes / tags by primary-key id. `fields` holds only provided keys."""
+        item = self.get_by_id(item_id)
+        if not item:
+            return None
+        if "priority" in fields:
+            item.priority = fields["priority"]
+        if "notes" in fields:
+            item.notes = fields["notes"]
+        if "tags" in fields:
+            tags = fields["tags"]
+            item.tags = json.dumps(tags) if tags else None   # [] or None -> NULL
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
     def remove(self, item_id: int) -> bool:
         """Remove item from watchlist."""
         item = self.get_by_id(item_id)

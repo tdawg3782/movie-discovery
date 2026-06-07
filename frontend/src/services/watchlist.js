@@ -24,6 +24,16 @@ export const watchlistService = {
     api.patch(`/watchlist/${tmdbId}/seasons`, { selected_seasons: selectedSeasons }),
 
   /**
+   * Update editable details (priority, notes, tags) for a watchlist item.
+   * Backend treats the body as a partial update; we send the full editor form.
+   * @param {number} id - Watchlist item id
+   * @param {{ priority?: number, notes?: string, tags?: string[] }} details
+   * @returns {Promise<WatchlistItem>}
+   */
+  updateDetails: (id, { priority, notes, tags }) =>
+    api.patch(`/watchlist/${id}/details`, { priority, notes, tags }),
+
+  /**
    * Process watchlist items (send to Radarr/Sonarr)
    * @param {number[]} ids - TMDB IDs to process
    * @param {string} mediaType - 'movie' or 'tv'
