@@ -62,6 +62,8 @@
               {{ addedToWatchlist ? '✓ Added' : addingToWatchlist ? 'Adding...' : '+ Add to Watchlist' }}
             </button>
           </div>
+
+          <WatchProviders :providers="media.watch_providers" />
         </div>
       </div>
 
@@ -117,6 +119,7 @@ import CastCarousel from '@/components/CastCarousel.vue'
 import MediaCarousel from '@/components/MediaCarousel.vue'
 import TrailerModal from '@/components/TrailerModal.vue'
 import SeasonSelectModal from '@/components/SeasonSelectModal.vue'
+import WatchProviders from '@/components/WatchProviders.vue'
 
 const route = useRoute()
 const media = ref(null)

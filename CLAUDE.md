@@ -44,7 +44,7 @@ backend/src/app/
 │   ├── watchlist/    # CRUD, batch process, batch delete, season selection
 │   ├── radarr/       # Movie library: status, add, queue, recent (extends BaseArrClient)
 │   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
-│   ├── settings/     # API keys, root folder paths, default quality profiles (encrypted keys; rest plain)
+│   ├── settings/     # API keys, root folder paths, default quality profiles, streaming_region (region for streaming-availability lookups, default US) (encrypted keys; rest plain)
 │   └── library/      # Combined activity feed
 ├── config.py         # Loads .env from project root
 ├── models.py         # SQLAlchemy: Settings, Watchlist (with selected_seasons), MediaCache
@@ -55,7 +55,7 @@ frontend/src/
 │                     # MediaDetailView, PersonView, CollectionView
 ├── components/       # FilterPanel, PaginationControls, TrailerModal, CastCarousel,
 │                     # MediaCarousel, MediaCard, QueueItem, DownloadProgress,
-│                     # StatusBadge, SeasonSelectModal
+│                     # StatusBadge, SeasonSelectModal, WatchProviders
 ├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
 ├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested),
 │                     # watchlistState.js (URL-as-state + sort/filter for Watchlist; unit-tested)

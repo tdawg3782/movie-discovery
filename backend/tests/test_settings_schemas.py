@@ -79,6 +79,30 @@ def test_settings_response_quality_profile_set():
     assert data.sonarr_quality_profile_id == "7"
 
 
+def test_settings_update_streaming_region_defaults_none():
+    """SettingsUpdate streaming_region field defaults to None."""
+    data = SettingsUpdate()
+    assert data.streaming_region is None
+
+
+def test_settings_update_streaming_region_set():
+    """SettingsUpdate accepts a streaming region."""
+    data = SettingsUpdate(streaming_region="GB")
+    assert data.streaming_region == "GB"
+
+
+def test_settings_response_streaming_region_defaults_none():
+    """SettingsResponse streaming_region field defaults to None."""
+    data = SettingsResponse()
+    assert data.streaming_region is None
+
+
+def test_settings_response_streaming_region_set():
+    """SettingsResponse exposes the streaming region."""
+    data = SettingsResponse(streaming_region="GB")
+    assert data.streaming_region == "GB"
+
+
 def test_connection_test_request():
     """ConnectionTestRequest should validate service type."""
     data = ConnectionTestRequest(service="tmdb")

@@ -1,7 +1,7 @@
 """Discovery API routes."""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.config import settings
+from app.config import settings, get_setting
 from app.schemas import MediaList, MediaResponse
 from .tmdb_client import TMDBClient
 from .schemas import DiscoveryFilters
@@ -10,6 +10,42 @@ router = APIRouter(prefix="/api/discover", tags=["discovery"])
 genres_router = APIRouter(prefix="/api/genres", tags=["genres"])
 
 tmdb_client = TMDBClient(api_key=settings.tmdb_api_key)
+
+DEFAULT_REGION = "US"
+
+
+def _extract_watch_providers(detail: dict, region: str) -> dict:
+    results = (detail.get("watch/providers") or {}).get("results", {})
+    entry = results.get(region) or {}
+
+    def _slim(items):
+        return [
+            {
+                "provider_id": p.get("provider_id"),
+                "provider_name": p.get("provider_name"),
+                "logo_path": p.get("logo_path"),
+            }
+            for p in (items or [])
+        ]
+
+    seen, free = set(), []
+    for p in (entry.get("free") or []) + (entry.get("ads") or []):
+        pid = p.get("provider_id")
+        if pid in seen:
+            continue
+        seen.add(pid)
+        free.append({
+            "provider_id": pid,
+            "provider_name": p.get("provider_name"),
+            "logo_path": p.get("logo_path"),
+        })
+
+    return {
+        "region": region,
+        "link": entry.get("link"),
+        "flatrate": _slim(entry.get("flatrate")),
+        "free": free,
+    }
 
 
 def _transform_tmdb_result(item: dict, media_type: str | None = None) -> MediaResponse:
@@ -164,6 +200,9 @@ async def get_movie_detail(movie_id: int):
     data = await tmdb_client.get_movie_detail(movie_id)
     if not data:
         raise HTTPException(status_code=404, detail="Movie not found")
+    region = get_setting("streaming_region") or DEFAULT_REGION
+    data["watch_providers"] = _extract_watch_providers(data, region)
+    data.pop("watch/providers", None)
     return data
 
 
@@ -173,6 +212,9 @@ async def get_show_detail(show_id: int):
     data = await tmdb_client.get_show_detail(show_id)
     if not data:
         raise HTTPException(status_code=404, detail="Show not found")
+    region = get_setting("streaming_region") or DEFAULT_REGION
+    data["watch_providers"] = _extract_watch_providers(data, region)
+    data.pop("watch/providers", None)
     return data
 
 

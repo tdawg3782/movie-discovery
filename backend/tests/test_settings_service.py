@@ -99,6 +99,31 @@ def test_partial_update_preserves_other_quality_profile(db):
     assert service.get_raw_value("sonarr_quality_profile_id") == "7"
 
 
+def test_streaming_region_round_trip(db):
+    """streaming_region persists as a plain string and round-trips."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(streaming_region="GB"))
+    assert service.get_settings().streaming_region == "GB"
+    assert service.get_raw_value("streaming_region") == "GB"
+
+
+def test_streaming_region_clear(db):
+    """Setting streaming_region to empty string deletes the key."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(streaming_region="GB"))
+    service.update_settings(SettingsUpdate(streaming_region=""))
+    assert service.get_raw_value("streaming_region") is None
+
+
+def test_partial_update_preserves_region_and_quality_profile(db):
+    """Setting streaming_region must not delete an existing quality profile."""
+    service = SettingsService(db)
+    service.update_settings(SettingsUpdate(radarr_quality_profile_id="4"))
+    service.update_settings(SettingsUpdate(streaming_region="GB"))
+    assert service.get_raw_value("radarr_quality_profile_id") == "4"
+    assert service.get_raw_value("streaming_region") == "GB"
+
+
 def test_partial_update_preserves_other_root_folder(db):
     """A partial update for one root folder must not delete the other."""
     service = SettingsService(db)

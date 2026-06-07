@@ -134,6 +134,22 @@
         </div>
       </section>
 
+      <!-- Streaming Availability Section -->
+      <section class="settings-section">
+        <h2>Streaming Availability</h2>
+        <div class="form-group">
+          <label for="streaming_region">Region</label>
+          <input
+            id="streaming_region"
+            v-model="form.streaming_region"
+            type="text"
+            placeholder="US"
+            maxlength="2"
+          />
+          <div class="hint">Two-letter country code (e.g. US, GB, CA). Leave empty to default to US.</div>
+        </div>
+      </section>
+
       <!-- Save Button -->
       <div class="form-actions">
         <button type="submit" :disabled="saving" class="btn-save">
@@ -166,7 +182,8 @@ const form = reactive({
   sonarr_api_key: '',
   sonarr_root_folder: '',
   radarr_quality_profile_id: '',
-  sonarr_quality_profile_id: ''
+  sonarr_quality_profile_id: '',
+  streaming_region: ''
 })
 
 const qualityProfiles = reactive({
@@ -206,6 +223,7 @@ async function loadSettings() {
     form.sonarr_root_folder = settings.value.sonarr_root_folder || ''
     form.radarr_quality_profile_id = settings.value.radarr_quality_profile_id || ''
     form.sonarr_quality_profile_id = settings.value.sonarr_quality_profile_id || ''
+    form.streaming_region = settings.value.streaming_region || ''
     // Fetch quality profiles (guarded: service may be unconfigured)
     try { qualityProfiles.radarr = await settingsService.getRadarrQualityProfiles() } catch (e) { qualityProfiles.radarr = [] }
     try { qualityProfiles.sonarr = await settingsService.getSonarrQualityProfiles() } catch (e) { qualityProfiles.sonarr = [] }
@@ -222,7 +240,7 @@ async function saveSettings() {
 
   try {
     // Build updates - include empty strings for clearable fields
-    const clearableFields = ['radarr_root_folder', 'sonarr_root_folder', 'radarr_quality_profile_id', 'sonarr_quality_profile_id']
+    const clearableFields = ['radarr_root_folder', 'sonarr_root_folder', 'radarr_quality_profile_id', 'sonarr_quality_profile_id', 'streaming_region']
     const updates = {}
 
     Object.entries(form).forEach(([key, value]) => {

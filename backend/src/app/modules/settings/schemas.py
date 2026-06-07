@@ -15,6 +15,7 @@ class SettingsUpdate(BaseModel):
     sonarr_root_folder: Optional[str] = None
     radarr_quality_profile_id: Optional[str] = None
     sonarr_quality_profile_id: Optional[str] = None
+    streaming_region: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -29,6 +30,7 @@ class SettingsResponse(BaseModel):
     sonarr_root_folder: Optional[str] = None
     radarr_quality_profile_id: Optional[str] = None
     sonarr_quality_profile_id: Optional[str] = None
+    streaming_region: Optional[str] = None
     has_tmdb: bool = False
     has_radarr: bool = False
     has_sonarr: bool = False

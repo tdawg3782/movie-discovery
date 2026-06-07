@@ -255,3 +255,28 @@ async def test_close_client(tmdb_client):
     # Close it
     await tmdb_client.close()
     assert tmdb_client._client is None
+
+
+# --- watch/providers append_to_response Tests ---
+
+
+@pytest.mark.asyncio
+async def test_get_movie_detail_appends_watch_providers(tmdb_client):
+    with patch.object(tmdb_client, "_get_or_none", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = {"id": 603}
+        await tmdb_client.get_movie_detail(603)
+
+    args, kwargs = mock_get.call_args
+    params = kwargs.get("params", args[1] if len(args) > 1 else {})
+    assert "watch/providers" in params["append_to_response"]
+
+
+@pytest.mark.asyncio
+async def test_get_show_detail_appends_watch_providers(tmdb_client):
+    with patch.object(tmdb_client, "_get_or_none", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = {"id": 1396}
+        await tmdb_client.get_show_detail(1396)
+
+    args, kwargs = mock_get.call_args
+    params = kwargs.get("params", args[1] if len(args) > 1 else {})
+    assert "watch/providers" in params["append_to_response"]

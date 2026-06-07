@@ -156,14 +156,14 @@ class TMDBClient:
         """Get movie details with credits, videos, and recommendations."""
         return await self._get_or_none(
             f"/movie/{movie_id}",
-            {"append_to_response": "credits,videos,recommendations"},
+            {"append_to_response": "credits,videos,recommendations,watch/providers"},
         )
 
     async def get_show_detail(self, show_id: int) -> dict[str, Any] | None:
         """Get TV show details with credits, videos, and recommendations."""
         return await self._get_or_none(
             f"/tv/{show_id}",
-            {"append_to_response": "credits,videos,recommendations"},
+            {"append_to_response": "credits,videos,recommendations,watch/providers"},
         )
 
     async def get_collection(self, collection_id: int) -> dict[str, Any] | None:

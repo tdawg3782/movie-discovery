@@ -41,12 +41,25 @@ class TestGetMovieDetail:
                     {"id": 604, "title": "The Matrix Reloaded"},
                 ]
             },
+            "watch/providers": {
+                "results": {
+                    "US": {
+                        "link": "https://x/watch?locale=US",
+                        "flatrate": [
+                            {"provider_id": 8, "provider_name": "Netflix", "logo_path": "/n.jpg"},
+                        ],
+                    }
+                }
+            },
         }
 
         with patch(
             "app.modules.discovery.router.tmdb_client.get_movie_detail",
             new_callable=AsyncMock,
-        ) as mock:
+        ) as mock, patch(
+            "app.modules.discovery.router.get_setting",
+            return_value="US",
+        ):
             mock.return_value = mock_response
             response = client.get("/api/discover/movies/603")
 
@@ -59,6 +72,10 @@ class TestGetMovieDetail:
         assert "credits" in data
         assert "videos" in data
         assert "recommendations" in data
+        assert data["watch_providers"]["region"] == "US"
+        assert len(data["watch_providers"]["flatrate"]) == 1
+        assert data["watch_providers"]["flatrate"][0]["provider_name"] == "Netflix"
+        assert "watch/providers" not in data
 
     def test_returns_404_for_invalid_id(self, client):
         """Should return 404 for non-existent movie."""

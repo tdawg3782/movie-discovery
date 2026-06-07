@@ -30,6 +30,7 @@ class SettingsService:
             sonarr_root_folder=self._get_plain(settings, "sonarr_root_folder"),
             radarr_quality_profile_id=self._get_plain(settings, "radarr_quality_profile_id"),
             sonarr_quality_profile_id=self._get_plain(settings, "sonarr_quality_profile_id"),
+            streaming_region=self._get_plain(settings, "streaming_region"),
             has_tmdb="tmdb_api_key" in settings,
             has_radarr="radarr_url" in settings and "radarr_api_key" in settings,
             has_sonarr="sonarr_url" in settings and "sonarr_api_key" in settings,
@@ -41,6 +42,7 @@ class SettingsService:
         "sonarr_root_folder",
         "radarr_quality_profile_id",
         "sonarr_quality_profile_id",
+        "streaming_region",
     }
 
     def update_settings(self, update: SettingsUpdate) -> None:
