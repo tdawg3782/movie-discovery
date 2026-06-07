@@ -264,10 +264,17 @@ Internet → Cloudflare → Tunnel → frontend:80 (nginx)
 
 ### Running Tests
 
+**Backend:**
 ```bash
 cd backend
 pytest -v              # All tests
 pytest --cov=app       # With coverage
+```
+
+**Frontend** (Vitest unit tests, added in v2.7.0):
+```bash
+cd frontend
+npm run test
 ```
 
 ### Manual Server Start

@@ -51,9 +51,11 @@ backend/src/app/
 frontend/src/
 ├── views/            # DiscoverView, WatchlistView, LibraryView, SettingsView,
 │                     # MediaDetailView, PersonView, CollectionView
-├── components/       # FilterPanel, TrailerModal, CastCarousel, MediaCarousel,
-│                     # QueueItem, DownloadProgress, StatusBadge, SeasonSelectModal
+├── components/       # FilterPanel, PaginationControls, TrailerModal, CastCarousel,
+│                     # MediaCarousel, MediaCard, QueueItem, DownloadProgress,
+│                     # StatusBadge, SeasonSelectModal
 ├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
+├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested)
 └── router/           # Vue Router config
 ```
 
