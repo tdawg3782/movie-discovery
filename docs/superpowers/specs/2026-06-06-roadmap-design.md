@@ -73,6 +73,8 @@ movies; navigating back from a detail page preserves tab, page, and filters.
 
 ### 2. Watchlist sort & filter  *(part of the "flat dump" itch)*
 
+**Status:** SHIPPED — v2.8.0 (2026-06-06). Watchlist gained sort (date added / title / rating / release date, either direction, nulls-last) and filter (media type + status); the media-type tabs became state-driven. The chosen sort/filter is mirrored to the URL query (`router.replace`, defaults omitted) and restored on reload/back. Logic lives in a new pure, unit-tested `frontend/src/utils/watchlistState.js` (`parseWatchlistState` / `serializeWatchlistState` / `applyWatchlistView`, 20 Vitest cases); `WatchlistView.vue` is thin glue over it.
+
 **What:** Add sort (date added, title, rating, release date) and filter (movies vs shows,
 status) controls to the watchlist.
 

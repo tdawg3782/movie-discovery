@@ -10,7 +10,7 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 | **Search** | Find any movie or TV show |
 | **Detail Pages** | View trailers, cast, recommendations, collections |
 | **Person Pages** | Browse actor/director filmographies |
-| **Watchlist** | Stage items before adding to library (batch processing, season selection) |
+| **Watchlist** | Stage items before adding to library (sort & filter, batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
 | **Settings** | Configure API keys via UI |
 
@@ -87,10 +87,11 @@ Your active tab, page, search, and filters are saved in the page URL, so reloadi
 ### Adding to Library
 
 1. Go to **Watchlist**
-2. For TV shows: click row to expand and select specific seasons
-3. Select items with checkboxes
-4. Click **Add to Library**
-5. Confirm in the modal (selected seasons sent to Sonarr)
+2. Sort by date added, title, rating, or release date and filter by media type or status (your choice is saved in the page URL, so it survives a reload and the **Back** button)
+3. For TV shows: click row to expand and select specific seasons
+4. Select items with checkboxes
+5. Click **Add to Library**
+6. Confirm in the modal (selected seasons sent to Sonarr)
 
 ### Monitoring Downloads
 
