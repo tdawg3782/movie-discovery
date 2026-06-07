@@ -6,6 +6,7 @@ import MediaDetailView from '../views/MediaDetailView.vue'
 import PersonView from '../views/PersonView.vue'
 import CollectionView from '../views/CollectionView.vue'
 import LibraryView from '../views/LibraryView.vue'
+import CalendarView from '../views/CalendarView.vue'
 
 const routes = [
   {
@@ -49,6 +50,11 @@ const routes = [
     path: '/library',
     name: 'library',
     component: LibraryView
+  },
+  {
+    path: '/calendar',
+    name: 'calendar',
+    component: CalendarView
   }
 ]
 

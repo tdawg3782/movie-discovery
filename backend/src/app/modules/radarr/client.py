@@ -95,3 +95,7 @@ class RadarrClient(BaseArrClient):
         movies = await self._get("/movie")
         movies.sort(key=lambda m: m.get("added", ""), reverse=True)
         return [m for m in movies if m.get("hasFile")][:limit]
+
+    async def get_calendar(self, start: str, end: str) -> list[dict]:
+        """Get upcoming movie releases from Radarr."""
+        return await self._get("/calendar", {"start": start, "end": end, "unmonitored": False})

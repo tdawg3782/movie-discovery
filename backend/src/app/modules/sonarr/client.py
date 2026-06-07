@@ -195,3 +195,7 @@ class SonarrClient(BaseArrClient):
         })
 
         return updated
+
+    async def get_calendar(self, start: str, end: str) -> list[dict]:
+        """Get upcoming episodes from Sonarr."""
+        return await self._get("/calendar", {"start": start, "end": end, "includeSeries": True})

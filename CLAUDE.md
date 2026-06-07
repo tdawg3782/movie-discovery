@@ -45,20 +45,22 @@ backend/src/app/
 │   ├── radarr/       # Movie library: status, add, queue, recent (extends BaseArrClient)
 │   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
 │   ├── settings/     # API keys, root folder paths, default quality profiles, streaming_region (region for streaming-availability lookups, default US) (encrypted keys; rest plain)
-│   └── library/      # Combined activity feed
+│   ├── library/      # Combined activity feed
+│   └── calendar/      # Coming-Soon agenda: Radarr/Sonarr calendars + watchlist release dates
 ├── config.py         # Loads .env from project root
 ├── models.py         # SQLAlchemy: Settings, Watchlist (selected_seasons, priority, tags), MediaCache
 └── main.py           # FastAPI app
 
 frontend/src/
 ├── views/            # DiscoverView, WatchlistView, LibraryView, SettingsView,
-│                     # MediaDetailView, PersonView, CollectionView
+│                     # MediaDetailView, PersonView, CollectionView, CalendarView
 ├── components/       # FilterPanel, PaginationControls, TrailerModal, CastCarousel,
 │                     # MediaCarousel, MediaCard, QueueItem, DownloadProgress,
 │                     # StatusBadge, SeasonSelectModal, WatchProviders
-├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js
+├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js, calendar.js
 ├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested),
-│                     # watchlistState.js (URL-as-state + sort/filter + priority grouping + tags helpers for Watchlist; unit-tested)
+│                     # watchlistState.js (URL-as-state + sort/filter + priority grouping + tags helpers for Watchlist; unit-tested),
+│                     # calendarState.js (agenda grouping/formatting; unit-tested)
 └── router/           # Vue Router config
 ```
 
@@ -73,6 +75,7 @@ frontend/src/
 | `backend/src/app/modules/sonarr/client.py` | Sonarr API with season monitoring |
 | `frontend/src/components/SeasonSelectModal.vue` | TV show season picker (with status display) |
 | `frontend/src/views/WatchlistView.vue` | Expandable season editing |
+| `backend/src/app/modules/calendar/service.py` | Pure agenda normalizer (Sonarr/Radarr/watchlist -> unified sorted entries) |
 
 ## Code Style
 
