@@ -128,6 +128,14 @@ const props = defineProps({
   mediaType: {
     type: String,
     default: 'movie'
+  },
+  initialFilters: {
+    type: Object,
+    default: () => ({})
+  },
+  initialGenres: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -149,6 +157,15 @@ const filters = reactive({
 })
 
 onMounted(async () => {
+  selectedGenres.value = [...props.initialGenres]
+  const f = props.initialFilters || {}
+  filters.yearGte = f.yearGte ?? null
+  filters.yearLte = f.yearLte ?? null
+  filters.ratingGte = f.ratingGte ?? null
+  filters.certification = f.certification || ''
+  filters.sortBy = f.sortBy || 'popularity.desc'
+  filters.inLibrary = !!f.inLibrary
+  filters.notInLibrary = !!f.notInLibrary
   await loadGenres()
 })
 

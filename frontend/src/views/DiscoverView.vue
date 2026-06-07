@@ -5,7 +5,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="Search movies and TV shows..."
-        @keyup.enter="performSearch()"
+        @keyup.enter="submitSearch"
       />
       <button v-if="searchQuery" class="clear-btn" @click="clearSearch">×</button>
     </div>
@@ -13,13 +13,13 @@
     <div v-if="!isSearching" class="tabs">
       <button
         :class="{ active: activeTab === 'movies' }"
-        @click="activeTab = 'movies'"
+        @click="switchTab('movies')"
       >
         Movies
       </button>
       <button
         :class="{ active: activeTab === 'shows' }"
-        @click="activeTab = 'shows'"
+        @click="switchTab('shows')"
       >
         Shows
       </button>
@@ -29,6 +29,8 @@
     <FilterPanel
       v-if="!isSearching"
       :media-type="activeTab === 'movies' ? 'movie' : 'show'"
+      :initial-filters="filters"
+      :initial-genres="filters.genre ? filters.genre.split(',').map(Number) : []"
       @filter-change="handleFilterChange"
     />
 
@@ -40,7 +42,7 @@
 
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
-      <button @click="fetchContent">Retry</button>
+      <button @click="retry">Retry</button>
     </div>
 
     <div v-else-if="items.length === 0" class="empty">
@@ -56,9 +58,7 @@
       />
     </div>
 
-    <div v-if="!loading && items.length > 0 && currentPage < totalPages" class="load-more">
-      <button @click="loadNextPage">Load More</button>
-    </div>
+    <PaginationControls v-if="!loading && !error" :current-page="currentPage" :total-pages="totalPages" @change="goToPage" />
 
     <!-- Season Select Modal for TV shows -->
     <SeasonSelectModal
@@ -72,39 +72,51 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import MediaCard from '../components/MediaCard.vue'
 import FilterPanel from '../components/FilterPanel.vue'
+import PaginationControls from '../components/PaginationControls.vue'
 import SeasonSelectModal from '../components/SeasonSelectModal.vue'
 import { discoverService } from '../services/discover'
 import { libraryService } from '../services/library'
 import { watchlistService } from '../services/watchlist'
+import { parseDiscoverState, serializeDiscoverState, clampPage } from '@/utils/discoverState'
 
-const activeTab = ref('movies')
+const route = useRoute()
+const router = useRouter()
+const initial = parseDiscoverState(route.query)
+
+function hasActiveFilters(f) {
+  return !!(f.genre || f.yearGte || f.yearLte || f.ratingGte || f.certification || (f.sortBy && f.sortBy !== 'popularity.desc') || f.inLibrary || f.notInLibrary)
+}
+
+const activeTab = ref(initial.tab)
 const items = ref([])
 const loading = ref(false)
 const error = ref(null)
-const searchQuery = ref('')
-const isSearching = ref(false)
-const currentPage = ref(1)
+const searchQuery = ref(initial.search)
+const isSearching = ref(initial.search.trim().length > 0)
+const currentPage = ref(initial.page)
 const totalPages = ref(1)
 
 // Season selection modal state
 const showSeasonModal = ref(false)
 const selectedShow = ref(null)
 const pendingMedia = ref(null)
-const isFiltering = ref(false)
+const isFiltering = ref(hasActiveFilters(initial.filters))
 
-const filters = reactive({
-  genre: null,
-  yearGte: null,
-  yearLte: null,
-  ratingGte: null,
-  certification: null,
-  sortBy: 'popularity.desc',
-  inLibrary: false,
-  notInLibrary: false
-})
+const filters = reactive({ ...initial.filters })
+
+const commitState = () => {
+  const query = serializeDiscoverState({
+    tab: activeTab.value,
+    page: currentPage.value,
+    search: searchQuery.value,
+    filters,
+  })
+  router.push({ query })
+}
 
 const fetchLibraryStatuses = async (mediaItems) => {
   if (!mediaItems.length) return
@@ -164,14 +176,8 @@ const applyLibraryFilter = () => {
   })
 }
 
-const fetchTrending = () => {
-  isSearching.value = false
-  fetchContent()
-}
-
-const performSearch = async (page = 1, append = false) => {
+const performSearch = async (page = 1) => {
   if (!searchQuery.value.trim()) {
-    clearSearch()
     return
   }
 
@@ -182,16 +188,14 @@ const performSearch = async (page = 1, append = false) => {
 
   try {
     const response = await discoverService.search(searchQuery.value, page)
-    const newResults = response.results || []
-    items.value = append ? [...items.value, ...newResults] : newResults
+    items.value = response.results || []
     totalPages.value = response.total_pages || 1
 
-    // Fetch library statuses for search results
-    await fetchLibraryStatuses(append ? newResults : items.value)
-    if (!append) applyLibraryFilter()
+    await fetchLibraryStatuses(items.value)
+    applyLibraryFilter()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Search failed'
-    if (!append) items.value = []
+    items.value = []
   } finally {
     loading.value = false
   }
@@ -201,26 +205,19 @@ const clearSearch = () => {
   searchQuery.value = ''
   isSearching.value = false
   currentPage.value = 1
-  fetchContent()
+  commitState()
+  fetchContent(1)
 }
 
 const handleFilterChange = (newFilters) => {
   Object.assign(filters, newFilters)
-  isFiltering.value = !!(
-    newFilters.genre ||
-    newFilters.yearGte ||
-    newFilters.yearLte ||
-    newFilters.ratingGte ||
-    newFilters.certification ||
-    newFilters.sortBy !== 'popularity.desc' ||
-    newFilters.inLibrary ||
-    newFilters.notInLibrary
-  )
+  isFiltering.value = hasActiveFilters(newFilters)
   currentPage.value = 1
-  fetchContent()
+  commitState()
+  fetchContent(1)
 }
 
-const fetchContent = async (page = 1, append = false) => {
+const fetchContent = async (page = 1) => {
   loading.value = true
   error.value = null
   currentPage.value = page
@@ -243,30 +240,47 @@ const fetchContent = async (page = 1, append = false) => {
         : await discoverService.getTrendingShows(page)
     }
 
-    const newResults = response.results || []
-    items.value = append ? [...items.value, ...newResults] : newResults
+    items.value = response.results || []
     totalPages.value = response.total_pages || 1
 
     // Fetch library statuses
-    await fetchLibraryStatuses(append ? newResults : items.value)
+    await fetchLibraryStatuses(items.value)
     applyLibraryFilter()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load content'
-    if (!append) items.value = []
+    items.value = []
   } finally {
     loading.value = false
   }
 }
 
-const loadNextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    if (isSearching.value) {
-      performSearch(currentPage.value + 1, true)
-    } else {
-      fetchContent(currentPage.value + 1, true)
-    }
-  }
+const goToPage = (page) => {
+  const target = clampPage(page, totalPages.value)
+  currentPage.value = target
+  commitState()
+  if (isSearching.value) performSearch(target)
+  else fetchContent(target)
 }
+
+const submitSearch = () => {
+  if (!searchQuery.value.trim()) { clearSearch(); return }
+  isSearching.value = true
+  currentPage.value = 1
+  commitState()
+  performSearch(1)
+}
+
+const switchTab = (tab) => {
+  if (activeTab.value === tab) return
+  activeTab.value = tab
+  filters.genre = null            // genre IDs are media-type-specific; panel clears its genre selection on tab switch
+  isFiltering.value = hasActiveFilters(filters)
+  currentPage.value = 1
+  commitState()
+  fetchContent(1)
+}
+
+const retry = () => { if (isSearching.value) performSearch(currentPage.value); else fetchContent(currentPage.value) }
 
 const handleAdd = async (media) => {
   const mediaType = media.media_type || (activeTab.value === 'movies' ? 'movie' : 'show')
@@ -322,12 +336,9 @@ const updateItemStatus = (media, status) => {
   }
 }
 
-watch(activeTab, () => {
-  fetchTrending()
-})
-
 onMounted(() => {
-  fetchTrending()
+  if (isSearching.value) performSearch(currentPage.value)
+  else fetchContent(currentPage.value)
 })
 </script>
 
@@ -442,24 +453,4 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.load-more {
-  text-align: center;
-  padding: 30px 0;
-}
-
-.load-more button {
-  padding: 12px 40px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #e0e0e0;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.load-more button:hover {
-  background: #3a3a3a;
-  border-color: #e50914;
-}
 </style>
