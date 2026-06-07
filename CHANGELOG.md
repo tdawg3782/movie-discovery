@@ -5,6 +5,20 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-06-06
+
+### Added
+
+- **Coming-Soon / Calendar view**
+  - New **Coming Soon** screen (`/calendar`, in the nav after Library) shows an on-demand agenda of what's releasing soon for everything you track: upcoming episodes of shows in Sonarr, upcoming movie release dates from Radarr, and release dates for watchlist movies not yet in your library — grouped into date sections, sorted soonest-first
+  - **On-demand fetch on page open — no background scheduler** (honors the roadmap constraint); default window is today through +7 days (UTC)
+  - Backend: new `get_calendar(start, end)` on both the Radarr and Sonarr clients (via `BaseArrClient`, `/api/v3/calendar`), and a new `calendar` module exposing `GET /api/calendar?start=&end=` that returns a unified, date-sorted `{ "items": [...] }`. Each entry carries `date`, `kind` (`episode`/`movie`), `source` (`sonarr`/`radarr`/`watchlist`), `title`, `subtitle` (episodes only), `tmdb_id`, and `in_library`
+  - Normalization/merge/sort lives in the pure, unit-tested `backend/src/app/modules/calendar/service.py` (Sonarr/Radarr/watchlist normalizers + `build_agenda`); the router is thin glue mirroring the `library`/`discovery` routers. Radarr entries pick the soonest in-window release among digital/physical/cinema dates; out-of-window records are skipped
+  - Frontend: new `CalendarView.vue` agenda screen plus a pure, unit-tested `frontend/src/utils/calendarState.js` (`groupByDate` consecutive date bucketing + `formatDayLabel`); `calendarService` mirrors the other services
+  - **No DB change / no migration** — purely additive read-only aggregation
+
+---
+
 ## [2.10.0] - 2026-06-06
 
 ### Added

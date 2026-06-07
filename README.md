@@ -14,12 +14,13 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 | **Person Pages** | Browse actor/director filmographies |
 | **Watchlist** | Stage items before adding to library (priority, notes, tags, group by priority, sort & filter, batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
+| **Coming Soon** | On-demand agenda of upcoming episodes (Sonarr), movie releases (Radarr), and watchlist movie release dates |
 | **Settings** | Configure API keys via UI |
 
 ## Navigation
 
 ```
-Discover → Watchlist → Library → Settings
+Discover → Watchlist → Library → Coming Soon → Settings
     ↓
   [poster click]
     ↓
@@ -103,6 +104,12 @@ Your active tab, page, search, and filters are saved in the page URL, so reloadi
 3. **Recently Added** tab shows completed items
 4. Toggle **Auto-refresh** for live updates
 
+### Seeing What's Coming Soon
+
+1. Go to **Coming Soon**
+2. The agenda lists, grouped by date (soonest first): upcoming episodes of shows in Sonarr, upcoming Radarr movie releases, and release dates for watchlist movies not yet in your library
+3. Data is fetched on demand when you open the page (no background polling); the default window is the next 7 days
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -123,7 +130,8 @@ movie_discovery/
 │   │   ├── radarr/       # Movies: status, add, queue, recent
 │   │   ├── sonarr/       # TV: status, add, queue, recent
 │   │   ├── settings/     # API key management
-│   │   └── library/      # Combined activity feed
+│   │   ├── library/      # Combined activity feed
+│   │   └── calendar/     # Coming-Soon agenda (Sonarr/Radarr + watchlist dates)
 │   ├── config.py
 │   ├── models.py
 │   └── main.py
@@ -135,7 +143,8 @@ movie_discovery/
 │   │   ├── SettingsView.vue
 │   │   ├── MediaDetailView.vue
 │   │   ├── PersonView.vue
-│   │   └── CollectionView.vue
+│   │   ├── CollectionView.vue
+│   │   └── CalendarView.vue
 │   ├── components/
 │   │   ├── FilterPanel.vue
 │   │   ├── TrailerModal.vue
@@ -183,6 +192,11 @@ movie_discovery/
 | GET | `/api/radarr/recent` | Recent movies |
 | GET | `/api/sonarr/queue` | TV queue |
 | GET | `/api/sonarr/recent` | Recent shows |
+
+### Calendar
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/calendar?start=&end=` | Unified agenda (Sonarr/Radarr calendars + watchlist movie release dates) |
 
 ### Settings
 | Method | Endpoint | Description |

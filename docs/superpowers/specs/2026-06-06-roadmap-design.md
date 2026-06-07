@@ -139,6 +139,8 @@ priority.
 
 ### 5. Coming-Soon / Calendar view  *("what's next" itch)*
 
+**Status:** SHIPPED — v2.11.0 (2026-06-06). On-demand Coming-Soon agenda at `/calendar`: a new `GET /api/calendar?start=&end=` aggregates Radarr + Sonarr `/api/v3/calendar` (new `get_calendar(start, end)` on both clients via `BaseArrClient`) plus TMDB release dates for not-yet-available watchlist movies into a single, date-sorted `{ items: [...] }` (default window today→+7d UTC). Normalize/merge/sort logic lives in the pure, unit-tested `backend/src/app/modules/calendar/service.py`; the router is thin glue (mirrors `library`/`discovery`). Frontend: new `CalendarView.vue` agenda screen, `/calendar` route, and a "Coming Soon" nav link, with pure unit-tested `frontend/src/utils/calendarState.js` (`groupByDate`/`formatDayLabel`). On-demand fetch only — no background scheduler; no DB change (no migration). Tests: backend 197 passed, frontend 50 passed.
+
 **What:** An agenda/calendar screen of upcoming episodes for tracked shows, announced or
 upcoming movies, and release dates for watchlist items not yet in the library.
 
