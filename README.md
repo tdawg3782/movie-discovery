@@ -205,13 +205,12 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
    - Create tunnel, copy the token
    - Configure public hostname pointing to `frontend:80`
 
-2. **Clone repo to NAS**
+2. **Create the stack directory on the NAS** (it has no `git`, so the code is shipped from
+   your machine in step 4)
    ```bash
-   ssh user@nas-ip
-   cd /volume1/docker
-   git clone https://github.com/tdawg3782/movie-discovery.git hoveyflix
-   cd hoveyflix
-   cp .env.example .env
+   ssh user@nas-ip "mkdir -p /volume1/docker/hoveyflix"
+   # copy the env template over, then fill it in (next step):
+   scp .env.example "user@nas-ip:/volume1/docker/hoveyflix/.env"
    ```
 
 3. **Configure environment**
@@ -225,11 +224,12 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
    CLOUDFLARE_TUNNEL_TOKEN=eyJ...
    ```
 
-4. **Deploy via SSH**
+4. **Ship the code and build** from a machine with git. `git archive` sends only tracked
+   files, so the NAS's `.env` and `data/` stay untouched; `DOCKER_BUILDKIT=0` is required
+   (the box's buildx is broken) and Docker runs without sudo:
    ```bash
-   ssh user@nas-ip
-   cd /volume1/docker/hoveyflix
-   sudo docker-compose up -d --build
+   git archive --format=tar HEAD | ssh user@nas-ip "tar -xf - -C /volume1/docker/hoveyflix"
+   ssh user@nas-ip "cd /volume1/docker/hoveyflix && DOCKER_BUILDKIT=0 /usr/local/bin/docker-compose up -d --build"
    ```
 
 5. **Verify**
@@ -238,14 +238,17 @@ Deploy to a Synology NAS with remote access via Cloudflare Tunnel.
 
 ### Docker Commands
 
+Run these in `/volume1/docker/hoveyflix` on the NAS (Docker needs no sudo; use full
+`/usr/local/bin` paths — they're not on the login PATH):
+
 | Task | Command |
 |------|---------|
-| Start | `sudo docker-compose up -d` |
-| Stop | `sudo docker-compose down` |
-| Rebuild | `sudo docker-compose up -d --build` |
-| View logs | `sudo docker logs hoveyflix-backend` |
-| Restart | `sudo docker-compose restart` |
-| Update | `git fetch origin && git reset --hard origin/master && sudo docker-compose up -d --build` |
+| Start | `/usr/local/bin/docker-compose up -d` |
+| Stop | `/usr/local/bin/docker-compose down` |
+| Rebuild | `DOCKER_BUILDKIT=0 /usr/local/bin/docker-compose up -d --build` |
+| View logs | `/usr/local/bin/docker logs hoveyflix-backend` |
+| Restart | `/usr/local/bin/docker-compose restart` |
+| Update | from your machine: `git archive --format=tar HEAD \| ssh user@nas-ip "tar -xf - -C /volume1/docker/hoveyflix"`, then Rebuild |
 
 ### Architecture
 

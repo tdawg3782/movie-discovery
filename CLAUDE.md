@@ -19,12 +19,17 @@
 | `frontend/Dockerfile` | Node build + nginx |
 | `frontend/nginx.conf` | Reverse proxy /api to backend |
 
-Deploy to NAS:
+Deploy to the NAS. The NAS has **no `git`** and Docker is **not on the login PATH**, so
+ship the committed tree from a machine that has git, then build with the **legacy** builder
+(buildx is broken on the box). `git archive` ships only tracked files, so the NAS's `.env`
+and `data/` (the SQLite DB) are left untouched:
 ```bash
-ssh user@nas-ip
-cd /volume1/docker/hoveyflix
-git fetch origin && git reset --hard origin/master
-sudo docker-compose up -d --build
+# From the repo root on a machine with git:
+git archive --format=tar HEAD | ssh user@nas-ip "tar -xf - -C /volume1/docker/hoveyflix"
+
+# On the NAS — docker works without sudo; DOCKER_BUILDKIT=0 avoids the buildx
+# permission error on the root-owned ~/.docker/buildx:
+ssh user@nas-ip "cd /volume1/docker/hoveyflix && DOCKER_BUILDKIT=0 /usr/local/bin/docker-compose up -d --build"
 ```
 
 ## Project Structure
