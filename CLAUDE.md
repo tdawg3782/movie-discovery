@@ -46,21 +46,23 @@ backend/src/app/
 │   ├── sonarr/       # TV library: status, add, queue, recent, season monitoring (extends BaseArrClient)
 │   ├── settings/     # API keys, root folder paths, default quality profiles, streaming_region (region for streaming-availability lookups, default US) (encrypted keys; rest plain)
 │   ├── library/      # Combined activity feed
-│   └── calendar/      # Coming-Soon agenda: Radarr/Sonarr calendars + watchlist release dates
+│   ├── calendar/      # Coming-Soon agenda: Radarr/Sonarr calendars + watchlist release dates
+│   └── recommendations/ # For You: aggregate TMDB recommendations (watchlist + owned library seeds), in-process TTL cache
 ├── config.py         # Loads .env from project root
 ├── models.py         # SQLAlchemy: Settings, Watchlist (selected_seasons, priority, tags), MediaCache
 └── main.py           # FastAPI app
 
 frontend/src/
 ├── views/            # DiscoverView, WatchlistView, LibraryView, SettingsView,
-│                     # MediaDetailView, PersonView, CollectionView, CalendarView
+│                     # MediaDetailView, PersonView, CollectionView, CalendarView, ForYouView
 ├── components/       # FilterPanel, PaginationControls, TrailerModal, CastCarousel,
 │                     # MediaCarousel, MediaCard, QueueItem, DownloadProgress,
 │                     # StatusBadge, SeasonSelectModal, WatchProviders
-├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js, calendar.js
+├── services/         # api.js, discover.js, watchlist.js, library.js, settings.js, sonarr.js, calendar.js, forYou.js
 ├── utils/            # discoverState.js (URL-as-state for Discover; unit-tested),
 │                     # watchlistState.js (URL-as-state + sort/filter + priority grouping + tags helpers for Watchlist; unit-tested),
-│                     # calendarState.js (agenda grouping/formatting; unit-tested)
+│                     # calendarState.js (agenda grouping/formatting; unit-tested),
+│                     # forYouState.js (For You add-target routing: movie→watchlist, show→detail; unit-tested)
 └── router/           # Vue Router config
 ```
 
@@ -76,6 +78,7 @@ frontend/src/
 | `frontend/src/components/SeasonSelectModal.vue` | TV show season picker (with status display) |
 | `frontend/src/views/WatchlistView.vue` | Expandable season editing |
 | `backend/src/app/modules/calendar/service.py` | Pure agenda normalizer (Sonarr/Radarr/watchlist -> unified sorted entries) |
+| `backend/src/app/modules/recommendations/service.py` | Pure For You seed/exclusion/aggregation (frequency→vote→popularity ranking) |
 
 ## Code Style
 

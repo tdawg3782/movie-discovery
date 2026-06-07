@@ -5,6 +5,20 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-06-06
+
+### Added
+
+- **For You — personalized recommendations (Tier 3 #7, Step 1)**
+  - New **For You** screen (`/for-you`, in the nav before Coming Soon) recommends movies and shows you don't already have, seeded entirely from your own data — watchlist items plus your owned Radarr/Sonarr libraries — with **owned and watchlisted titles excluded** from the results
+  - **TMDB-only, fully local signals — no external account, no Trakt**; empty local data ⇒ empty surface with **no TMDB calls**. Adding or owning a title changes the seeds, which changes the recommendations
+  - Backend: new `get_recommendations(tmdb_id, media_type)` on `TMDBClient` (`/{type}/{id}/recommendations`), and a new `recommendations` module exposing `GET /api/for-you` that fans out TMDB recommendations across the seeds (`asyncio.gather`), aggregates them, and returns a single-page `MediaList`. Ranking (frequency across distinct seeds → vote average → popularity) and the seed/exclusion logic live in the pure, unit-tested `backend/src/app/modules/recommendations/service.py`; the router is thin glue mirroring `calendar`
+  - **In-process TTL cache** keyed on the seed signature (6h), bypassed by `?refresh=true`; **no DB change / no migration, no background scheduler**. Radarr/Sonarr ownership fetches are best-effort — if an `*arr` is down the surface still works from the watchlist alone
+  - Frontend: new `ForYouView.vue`, `/for-you` route + nav link, `forYou.js` service, and a pure, unit-tested `frontend/src/utils/forYouState.js` (`addTargetFor`: movies add straight to the watchlist, shows route to their detail page for season selection); cards reuse the existing `MediaCard`
+  - Scope: this ships **Step 1** of the flagship only. Step 2 (explicit like / not-interested signals + genre/keyword affinity) and Step 3 ("Because you added X" rows) remain future steps
+
+---
+
 ## [2.11.0] - 2026-06-06
 
 ### Added

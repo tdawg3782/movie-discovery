@@ -15,12 +15,13 @@ A local movie and TV show discovery app with Radarr/Sonarr integration. Browse, 
 | **Watchlist** | Stage items before adding to library (priority, notes, tags, group by priority, sort & filter, batch processing, season selection) |
 | **Library Monitor** | See recent additions and download progress |
 | **Coming Soon** | On-demand agenda of upcoming episodes (Sonarr), movie releases (Radarr), and watchlist movie release dates |
+| **For You** | Personalized recommendations from your watchlist + owned library (TMDB-only), excluding titles you already have |
 | **Settings** | Configure API keys via UI |
 
 ## Navigation
 
 ```
-Discover → Watchlist → Library → Coming Soon → Settings
+Discover → Watchlist → Library → For You → Coming Soon → Settings
     ↓
   [poster click]
     ↓
@@ -110,6 +111,13 @@ Your active tab, page, search, and filters are saved in the page URL, so reloadi
 2. The agenda lists, grouped by date (soonest first): upcoming episodes of shows in Sonarr, upcoming Radarr movie releases, and release dates for watchlist movies not yet in your library
 3. Data is fetched on demand when you open the page (no background polling); the default window is the next 7 days
 
+### Getting Recommendations
+
+1. Go to **For You**
+2. The page recommends movies and shows you don't already have, drawn from your watchlist and owned Radarr/Sonarr libraries
+3. Recommendations are fetched on demand and cached; titles already owned or watchlisted are never shown
+4. Click **+** on a movie to add it to your watchlist; clicking a show opens its detail page to pick seasons
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -131,7 +139,8 @@ movie_discovery/
 │   │   ├── sonarr/       # TV: status, add, queue, recent
 │   │   ├── settings/     # API key management
 │   │   ├── library/      # Combined activity feed
-│   │   └── calendar/     # Coming-Soon agenda (Sonarr/Radarr + watchlist dates)
+│   │   ├── calendar/     # Coming-Soon agenda (Sonarr/Radarr + watchlist dates)
+│   │   └── recommendations/ # For You: aggregate TMDB recs (watchlist + owned library seeds)
 │   ├── config.py
 │   ├── models.py
 │   └── main.py
@@ -144,7 +153,8 @@ movie_discovery/
 │   │   ├── MediaDetailView.vue
 │   │   ├── PersonView.vue
 │   │   ├── CollectionView.vue
-│   │   └── CalendarView.vue
+│   │   ├── CalendarView.vue
+│   │   └── ForYouView.vue
 │   ├── components/
 │   │   ├── FilterPanel.vue
 │   │   ├── TrailerModal.vue
@@ -197,6 +207,11 @@ movie_discovery/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/calendar?start=&end=` | Unified agenda (Sonarr/Radarr calendars + watchlist movie release dates) |
+
+### For You
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/for-you?refresh=` | Aggregate recommendations from watchlist + owned library, excluding owned/watchlisted |
 
 ### Settings
 | Method | Endpoint | Description |

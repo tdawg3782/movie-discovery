@@ -181,6 +181,8 @@ channel.
 
 ### 7. Personalized discovery (fully local, no external account)  *("nothing personalized" itch)*
 
+**Status:** Step 1 SHIPPED — v2.12.0 (2026-06-06). New **For You** surface (`GET /api/for-you` → `/for-you`) recommends titles seeded from the watchlist + owned Radarr/Sonarr libraries, aggregated from TMDB `/{type}/{id}/recommendations` (new `TMDBClient.get_recommendations`), ranked by frequency → vote average → popularity, with owned/watchlisted excluded by construction; empty local data ⇒ empty surface with no TMDB calls. In-process TTL cache (6h) keyed on the seed signature, `?refresh=true` bypasses; best-effort `*arr` ownership fetches (degrade to watchlist-only if down); no DB change / no scheduler (note: the planned `LibraryStatus`-table read was dropped — ownership comes from live Radarr/Sonarr, matching the `library`/`calendar` modules). Pure seed/exclusion/ranking logic in unit-tested `backend/src/app/modules/recommendations/service.py`; frontend `ForYouView.vue` + `forYouState.js`. **Steps 2 (explicit like / not-interested signals + genre/keyword affinity) and 3 ("Because you added X" rows) remain.**
+
 **What:** A "Recommended for you" surface driven entirely by the app's own data plus TMDB.
 Done in steps so value lands early.
 
