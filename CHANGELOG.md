@@ -5,6 +5,25 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-06-10
+
+### Fixed
+
+- **Settings split-brain — UI-saved keys/URLs now reach every client** — TMDB, Radarr, and Sonarr clients are built through a shared factory (`backend/src/app/modules/clients.py`) that resolves credentials **DB-first** via `get_setting()` (with `.env` fallback). Keys and URLs saved in the `/settings` UI now take effect without an app restart; previously every client was bound to the env-only `config.settings` at import, so UI-saved settings were silently ignored everywhere except `/api/settings/test`
+- **One unreachable *arr no longer 500s the combined endpoints** — `/api/calendar`, `/api/library/activity`, and `/api/library/queue` aggregate Radarr/Sonarr with `return_exceptions=True`: a down source contributes empty results, the healthy source (and the watchlist agenda) still render, and the response carries a `degraded` list (e.g. `["sonarr"]`) that the Calendar/Library views surface as an inline "partial results" banner
+- **Arr-unreachable now returns 503/504, not a raw 500** — global httpx exception handlers map `ConnectError`/`RequestError` → 503, `TimeoutException` → 504, and `HTTPStatusError` → 502 (generic messages), covering the previously-unguarded queue/recent/seasons endpoints
+- **Calendar survives malformed Sonarr records** — the agenda normalizer null-guards missing `seasonNumber`/`episodeNumber` (specials / announced episodes) and degrades the single record instead of raising a `TypeError` that blanked the entire `/api/calendar` response
+- **Processed watchlist movies no longer double-listed in Coming Soon** — the calendar filter now excludes `added`/`downloading` rows (the old check tested a `"available"` status that is never set)
+- **For You no longer caches degraded or empty results** — a transient TMDB/*arr blip is still served but is no longer written to the 6h cache, so recommendations recover on the next request instead of blanking for hours
+- **Watchlist surfaces TMDB outages explicitly** — enrichment falls back to a `TMDB:{id}` placeholder **only** on a genuine 404; a real TMDB outage now returns `502 TMDB unavailable` instead of a list of placeholder rows
+- **`get_setting` no longer leaks DB sessions or swallows errors** — the session is closed in a `finally`, the except is narrowed to `SQLAlchemyError`/`InvalidToken`, and a warning naming the key is logged before falling back to `.env`
+
+### Changed
+
+- **Shared, persistent external-API clients with lifespan shutdown** — Radarr/Sonarr/TMDB now reuse process-wide httpx connection pools (arr pools rebuilt only when their resolved credentials change; the TMDB key is refreshed in place) and are closed once at application shutdown via `close_all_clients()`, replacing the per-request throwaway clients that defeated the documented persistent-connection design (`backend/src/app/modules/clients.py`)
+
+---
+
 ## [2.12.1] - 2026-06-10
 
 ### Fixed

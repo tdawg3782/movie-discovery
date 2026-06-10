@@ -98,7 +98,7 @@ frontend/src/
 - **TMDBClient._get_or_none()** — Returns None on 404 instead of raising (used for detail endpoints)
 - **Watchlist enrichment** — `_enrich_watchlist_item()` in router handles TMDB metadata + fallbacks
 - **Batch processing** — `asyncio.gather()` (backend) and `Promise.all()` (frontend) for parallelism
-- **Client factories** — Defined once in each module's router, imported by library router
+- **Client factories** — TMDB/Radarr/Sonarr clients are built by a shared factory module (`modules/clients.py`) with **DB-first credentials** via `get_setting()` (env fallback); httpx pools persist across requests (arr pools rebuilt only when credentials change, TMDB key refreshed in place) and are closed once at lifespan shutdown (`close_all_clients()`). The radarr/sonarr routers re-export the factories, so existing `Depends`/`dependency_overrides` keep resolving
 - **Media type convention** — App uses "show" internally, converts to "tv" for TMDB API calls
 - **Additive DB migrations** — `init_db()` runs `_migrate_watchlist_columns()` (guarded, idempotent `ALTER TABLE ... ADD COLUMN`) **after** `create_all`. `create_all` only creates missing tables; it never adds columns to an existing one, so **any new column on an existing model MUST get a guarded additive migration here** — otherwise the live NAS SQLite DB 500s with "no such column" (the v2.4.1 incident).
 
