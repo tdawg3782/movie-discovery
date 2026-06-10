@@ -17,7 +17,7 @@ def _make_engine():
 
 
 def _create_legacy_table(engine):
-    """Create a pre-migration watchlist table (no priority/tags)."""
+    """Create a pre-migration watchlist table (true original schema)."""
     with engine.begin() as conn:
         conn.execute(
             text(
@@ -27,9 +27,7 @@ def _create_legacy_table(engine):
                 "media_type TEXT, "
                 "added_at TIMESTAMP, "
                 "notes TEXT, "
-                "status TEXT, "
-                "selected_seasons TEXT, "
-                "is_season_update BOOLEAN)"
+                "status TEXT)"
             )
         )
 
@@ -48,12 +46,26 @@ def test_migration_adds_columns_to_legacy_table():
     _migrate_watchlist_columns(engine)
 
     columns = {c["name"] for c in inspect(engine).get_columns("watchlist")}
+    # Generic/future-proof: every model column must exist after migration.
+    for col in Base.metadata.tables["watchlist"].columns:
+        assert col.name in columns, f"missing migrated column: {col.name}"
+    # Specifically the columns this slice backfills.
+    assert "selected_seasons" in columns
+    assert "is_season_update" in columns
     assert "priority" in columns
     assert "tags" in columns
 
     with engine.begin() as conn:
-        row = conn.execute(text("SELECT priority, tags FROM watchlist")).fetchone()
-    assert row == (0, None)
+        row = conn.execute(
+            text(
+                "SELECT priority, tags, selected_seasons, is_season_update "
+                "FROM watchlist"
+            )
+        ).fetchone()
+    assert row[0] == 0
+    assert row[1] is None
+    assert row[2] is None
+    assert row[3] == 0
 
 
 def test_migration_is_idempotent():

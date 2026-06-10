@@ -1,6 +1,7 @@
 """Watchlist business logic."""
 import asyncio
 import json
+from sqlalchemy import tuple_
 from sqlalchemy.orm import Session
 
 from app.models import Watchlist
@@ -22,15 +23,37 @@ class WatchlistService:
         notes: str | None = None,
         selected_seasons: list[int] | None = None,
         is_season_update: bool = False
-    ) -> Watchlist:
-        """Add item to watchlist. Returns existing if duplicate."""
+    ) -> tuple[Watchlist, bool]:
+        """Add item to watchlist.
+
+        Returns ``(item, created)``. On a duplicate ``(tmdb_id, media_type)`` carrying
+        season intent (``selected_seasons`` provided or ``is_season_update`` truthy) the
+        existing row is updated (seasons unioned, status reset to ``pending``); otherwise
+        the existing row is returned untouched. ``created`` is ``True`` only for a new row.
+        """
         existing = (
             self.db.query(Watchlist)
             .filter(Watchlist.tmdb_id == tmdb_id, Watchlist.media_type == media_type)
             .first()
         )
         if existing:
-            return existing
+            season_intent = selected_seasons is not None or is_season_update
+            if not season_intent:
+                return existing, False
+
+            existing.is_season_update = is_season_update
+            stored = json.loads(existing.selected_seasons) if existing.selected_seasons else None
+            if not isinstance(stored, list):
+                stored = None
+            # None on either side means "all seasons", which dominates the union.
+            if selected_seasons is None or stored is None:
+                existing.selected_seasons = None
+            else:
+                existing.selected_seasons = json.dumps(sorted(set(stored) | set(selected_seasons)))
+            existing.status = "pending"
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing, False
 
         seasons_json = json.dumps(selected_seasons) if selected_seasons is not None else None
 
@@ -44,7 +67,7 @@ class WatchlistService:
         self.db.add(item)
         self.db.commit()
         self.db.refresh(item)
-        return item
+        return item, True
 
     def get_all(self) -> list[Watchlist]:
         """Get all watchlist items."""
@@ -54,13 +77,17 @@ class WatchlistService:
         """Get watchlist item by ID."""
         return self.db.query(Watchlist).filter(Watchlist.id == item_id).first()
 
-    def get_by_tmdb_id(self, tmdb_id: int) -> Watchlist | None:
-        """Get watchlist item by TMDB ID."""
-        return self.db.query(Watchlist).filter(Watchlist.tmdb_id == tmdb_id).first()
+    def get_by_tmdb_id(self, tmdb_id: int, media_type: str) -> Watchlist | None:
+        """Get watchlist item by TMDB id scoped to media_type."""
+        return (
+            self.db.query(Watchlist)
+            .filter(Watchlist.tmdb_id == tmdb_id, Watchlist.media_type == media_type)
+            .first()
+        )
 
-    def update_seasons(self, tmdb_id: int, selected_seasons: list[int] | None) -> Watchlist | None:
+    def update_seasons(self, tmdb_id: int, media_type: str, selected_seasons: list[int] | None) -> Watchlist | None:
         """Update selected seasons for a watchlist item."""
-        item = self.get_by_tmdb_id(tmdb_id)
+        item = self.get_by_tmdb_id(tmdb_id, media_type)
         if not item:
             return None
 
@@ -94,11 +121,11 @@ class WatchlistService:
         self.db.commit()
         return True
 
-    def delete_batch(self, tmdb_ids: list[int]) -> int:
-        """Delete multiple watchlist items by TMDB ID. Returns count deleted."""
+    def delete_batch(self, items: list[tuple[int, str]]) -> int:
+        """Delete multiple watchlist items by (tmdb_id, media_type). Returns count deleted."""
         deleted = (
             self.db.query(Watchlist)
-            .filter(Watchlist.tmdb_id.in_(tmdb_ids))
+            .filter(tuple_(Watchlist.tmdb_id, Watchlist.media_type).in_(items))
             .delete(synchronize_session=False)
         )
         self.db.commit()
@@ -130,10 +157,11 @@ class WatchlistService:
                 if media_type == "movie":
                     await client.add_movie(tmdb_id, quality_profile_id=quality_profile_id, root_folder_path=root_folder)
                 else:
-                    item = self.get_by_tmdb_id(tmdb_id)
+                    item = self.get_by_tmdb_id(tmdb_id, media_type)
                     selected_seasons = None
                     if item and item.selected_seasons:
-                        selected_seasons = json.loads(item.selected_seasons)
+                        parsed = json.loads(item.selected_seasons)
+                        selected_seasons = parsed if isinstance(parsed, list) else None
 
                     if item and item.is_season_update:
                         await client.update_season_monitoring(tmdb_id, selected_seasons)
@@ -149,7 +177,7 @@ class WatchlistService:
         for success_id, failure in results:
             if success_id is not None:
                 processed.append(success_id)
-                item = self.get_by_tmdb_id(success_id)
+                item = self.get_by_tmdb_id(success_id, media_type)
                 if item:
                     item.status = "added"
                     self.db.commit()

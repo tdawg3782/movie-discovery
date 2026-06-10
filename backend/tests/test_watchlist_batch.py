@@ -37,21 +37,24 @@ def client():
 
 def test_batch_delete(client):
     """DELETE /api/watchlist/batch should remove multiple items."""
-    # Add items
+    # Add a movie and a show
     client.post("/api/watchlist", json={
         "tmdb_id": 100,
         "media_type": "movie"
     })
     client.post("/api/watchlist", json={
         "tmdb_id": 101,
-        "media_type": "movie"
+        "media_type": "show"
     })
 
     # Delete batch
     response = client.request(
         "DELETE",
         "/api/watchlist/batch",
-        json={"ids": [100, 101]}
+        json={"items": [
+            {"tmdb_id": 100, "media_type": "movie"},
+            {"tmdb_id": 101, "media_type": "show"},
+        ]}
     )
     assert response.status_code == 200
     data = response.json()
@@ -74,11 +77,34 @@ def test_batch_delete_partial(client):
     response = client.request(
         "DELETE",
         "/api/watchlist/batch",
-        json={"ids": [100, 999]}
+        json={"items": [
+            {"tmdb_id": 100, "media_type": "movie"},
+            {"tmdb_id": 999, "media_type": "show"},
+        ]}
     )
     assert response.status_code == 200
     data = response.json()
     assert data["deleted"] == 1
+
+
+def test_batch_delete_cross_type_preserves_sibling(client):
+    """Deleting only the movie pair must leave a show sharing the tmdb_id intact."""
+    client.post("/api/watchlist", json={"tmdb_id": 603, "media_type": "movie"})
+    client.post("/api/watchlist", json={"tmdb_id": 603, "media_type": "show"})
+
+    response = client.request(
+        "DELETE",
+        "/api/watchlist/batch",
+        json={"items": [{"tmdb_id": 603, "media_type": "movie"}]}
+    )
+    assert response.status_code == 200
+    assert response.json()["deleted"] == 1
+
+    # The show row with the same tmdb_id must survive
+    remaining = client.get("/api/watchlist").json()
+    assert remaining["total"] == 1
+    assert remaining["items"][0]["tmdb_id"] == 603
+    assert remaining["items"][0]["media_type"] == "show"
 
 
 @patch("app.modules.radarr.client.RadarrClient.add_movie")
@@ -208,6 +234,7 @@ def test_batch_process_no_quality_profile(mock_get_setting, mock_add_movie, clie
 # Service-level tests for season update routing
 from unittest.mock import MagicMock
 from app.modules.watchlist.service import WatchlistService
+from app.modules.sonarr.client import SonarrClient
 
 
 @pytest.fixture
@@ -282,3 +309,75 @@ async def test_batch_process_new_series(db):
 
     assert 1234 in processed
     mock_instance.add_series.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_batch_process_season_update_all_seasons_none(db):
+    """is_season_update with selected_seasons=None routes None to update_season_monitoring without failing."""
+    item = Watchlist(
+        tmdb_id=1396,
+        media_type="tv",
+        selected_seasons=None,
+        is_season_update=True,
+    )
+    db.add(item)
+    db.commit()
+
+    service = WatchlistService(db)
+
+    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.update_season_monitoring = AsyncMock(return_value={"id": 1})
+
+        with patch("app.modules.watchlist.service.settings") as mock_settings:
+            mock_settings.sonarr_url = "http://localhost:8989"
+            mock_settings.sonarr_api_key = "test"
+
+            with patch("app.modules.watchlist.service.get_setting", return_value=None):
+                processed, failed = await service.process_batch([1396], "tv")
+
+    assert 1396 in processed
+    assert failed == []
+    mock_instance.update_season_monitoring.assert_called_once_with(1396, None)
+
+
+@pytest.mark.asyncio
+async def test_update_season_monitoring_none_monitors_all_non_special():
+    """update_season_monitoring(id, None) monitors all non-special seasons and leaves season 0 alone."""
+    client = SonarrClient("http://localhost:8989", "test")
+    client.lookup_series = AsyncMock(return_value={"tvdbId": 12345})
+    seasons = [
+        {"seasonNumber": 0, "monitored": False},
+        {"seasonNumber": 1, "monitored": False},
+        {"seasonNumber": 2, "monitored": False},
+    ]
+    client.get_series_by_tvdb_id = AsyncMock(return_value={"id": 1, "seasons": seasons})
+    client._put = AsyncMock(return_value={"id": 1})
+    client._post = AsyncMock(return_value={})
+
+    await client.update_season_monitoring(1396, None)
+
+    assert seasons[0]["monitored"] is False
+    assert seasons[1]["monitored"] is True
+    assert seasons[2]["monitored"] is True
+
+
+@pytest.mark.asyncio
+async def test_update_season_monitoring_none_skips_malformed_season():
+    """update_season_monitoring(id, None) skips seasons missing seasonNumber."""
+    client = SonarrClient("http://localhost:8989", "test")
+    client.lookup_series = AsyncMock(return_value={"tvdbId": 12345})
+    seasons = [
+        {"seasonNumber": 0, "monitored": False},
+        {"monitored": False},
+        {"seasonNumber": 1, "monitored": False},
+    ]
+    client.get_series_by_tvdb_id = AsyncMock(return_value={"id": 1, "seasons": seasons})
+    client._put = AsyncMock(return_value={"id": 1})
+    client._post = AsyncMock(return_value={})
+
+    await client.update_season_monitoring(1396, None)
+
+    assert seasons[0]["monitored"] is False
+    assert seasons[1]["monitored"] is False
+    assert seasons[2]["monitored"] is True

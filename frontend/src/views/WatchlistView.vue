@@ -116,13 +116,13 @@
           :class="['watchlist-item-wrapper', { expanded: isExpanded(item.tmdb_id) }]"
         >
           <div
-            :class="['watchlist-item', { selected: isSelected(item.tmdb_id), expandable: item.media_type === 'show' }]"
+            :class="['watchlist-item', { selected: isSelected(item), expandable: item.media_type === 'show' }]"
             @click="toggleExpand(item)"
           >
             <div class="item-checkbox" @click.stop>
               <input
                 type="checkbox"
-                :checked="isSelected(item.tmdb_id)"
+                :checked="isSelected(item)"
                 @change="toggleSelect(item)"
               />
             </div>
@@ -413,7 +413,7 @@ const showCount = computed(() =>
 
 const allSelected = computed(() =>
   filteredItems.value.length > 0 &&
-  filteredItems.value.every(i => isSelected(i.tmdb_id))
+  filteredItems.value.every(i => isSelected(i))
 )
 
 const selectedMovieIds = computed(() =>
@@ -428,12 +428,16 @@ const selectedShowIds = computed(() =>
     .map(s => s.tmdb_id)
 )
 
-function isSelected(tmdbId) {
-  return selectedItems.value.some(s => s.tmdb_id === tmdbId)
+function selectionKey(item) {
+  return `${item.media_type}:${item.tmdb_id}`
+}
+
+function isSelected(item) {
+  return selectedItems.value.some(s => s.tmdb_id === item.tmdb_id && s.media_type === item.media_type)
 }
 
 function toggleSelect(item) {
-  const index = selectedItems.value.findIndex(s => s.tmdb_id === item.tmdb_id)
+  const index = selectedItems.value.findIndex(s => s.tmdb_id === item.tmdb_id && s.media_type === item.media_type)
   if (index === -1) {
     selectedItems.value.push({ tmdb_id: item.tmdb_id, media_type: item.media_type })
   } else {
@@ -444,13 +448,13 @@ function toggleSelect(item) {
 function toggleSelectAll() {
   if (allSelected.value) {
     // Deselect all filtered items
-    const filteredIds = new Set(filteredItems.value.map(i => i.tmdb_id))
-    selectedItems.value = selectedItems.value.filter(s => !filteredIds.has(s.tmdb_id))
+    const keys = new Set(filteredItems.value.map(selectionKey))
+    selectedItems.value = selectedItems.value.filter(s => !keys.has(selectionKey(s)))
   } else {
     // Select all filtered items
-    const existing = new Set(selectedItems.value.map(s => s.tmdb_id))
+    const existing = new Set(selectedItems.value.map(selectionKey))
     for (const item of filteredItems.value) {
-      if (!existing.has(item.tmdb_id)) {
+      if (!existing.has(selectionKey(item))) {
         selectedItems.value.push({ tmdb_id: item.tmdb_id, media_type: item.media_type })
       }
     }
@@ -505,8 +509,7 @@ async function processSingle(item) {
 async function confirmBatchDelete() {
   if (confirm(`Remove ${selectedItems.value.length} item(s) from watchlist?`)) {
     try {
-      const ids = selectedItems.value.map(s => s.tmdb_id)
-      await watchlistService.deleteItems(ids)
+      await watchlistService.deleteItems(selectedItems.value.map(s => ({ tmdb_id: s.tmdb_id, media_type: s.media_type })))
       await fetchWatchlist()
       selectedItems.value = []
     } catch (err) {

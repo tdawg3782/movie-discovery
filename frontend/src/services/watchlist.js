@@ -44,9 +44,9 @@ export const watchlistService = {
 
   /**
    * Delete multiple watchlist items
-   * @param {number[]} ids - TMDB IDs to delete
+   * @param {Array<{tmdb_id: number, media_type: string}>} items - Items to delete
    * @returns {Promise<{deleted: number}>}
    */
-  deleteItems: (ids) =>
-    api.delete('/watchlist/batch', { data: { ids } }),
+  deleteItems: (items) =>
+    api.delete('/watchlist/batch', { data: { items } }),
 }

@@ -17,7 +17,14 @@ class BatchProcessResponse(BaseModel):
     failed: list[dict]  # Failed items with error messages
 
 
+class BatchDeleteItem(BaseModel):
+    """A single (tmdb_id, media_type) pair to delete."""
+
+    tmdb_id: int
+    media_type: Literal["movie", "show"]
+
+
 class BatchDeleteRequest(BaseModel):
     """Request to delete multiple watchlist items."""
 
-    ids: list[int]  # TMDB IDs
+    items: list[BatchDeleteItem]

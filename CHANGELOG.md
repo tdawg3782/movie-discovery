@@ -5,6 +5,14 @@ All notable changes to Movie Discovery will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.1] - 2026-06-10
+
+### Fixed
+
+- **Watchlist migration** now backfills `selected_seasons` and `is_season_update` on legacy/restored databases, alongside the existing `priority`/`tags` backfill — preventing "no such column" errors when an older DB is restored
+
+---
+
 ## [2.12.0] - 2026-06-06
 
 ### Added

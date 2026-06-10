@@ -173,7 +173,7 @@ class SonarrClient(BaseArrClient):
             "seasons": seasons,
         }
 
-    async def update_season_monitoring(self, tmdb_id: int, seasons_to_add: list[int]) -> dict:
+    async def update_season_monitoring(self, tmdb_id: int, seasons_to_add: list[int] | None) -> dict:
         """Add monitoring for additional seasons and trigger search."""
         series = await self.lookup_series(tmdb_id)
         if not series or not series.get("tvdbId"):
@@ -184,7 +184,11 @@ class SonarrClient(BaseArrClient):
             raise ValueError(f"Series not in Sonarr library: {tmdb_id}")
 
         for season in existing.get("seasons", []):
-            if season.get("seasonNumber") in seasons_to_add:
+            num = season.get("seasonNumber")
+            if seasons_to_add is None:
+                if num is not None and num != 0:
+                    season["monitored"] = True
+            elif num in seasons_to_add:
                 season["monitored"] = True
 
         updated = await self._put(f"/series/{existing['id']}", existing)

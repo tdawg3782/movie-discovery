@@ -2,7 +2,7 @@
 import asyncio
 import json
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -35,7 +35,8 @@ def _parse_seasons(raw: str | None) -> list[int] | None:
     if not raw:
         return None
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
+        return result if isinstance(result, list) else None
     except json.JSONDecodeError:
         return None
 
@@ -112,16 +113,18 @@ async def get_watchlist(service: WatchlistService = Depends(get_service)):
 
 @router.post("", response_model=WatchlistItem, status_code=201)
 async def add_to_watchlist(
-    data: WatchlistAdd, service: WatchlistService = Depends(get_service)
+    data: WatchlistAdd, response: Response, service: WatchlistService = Depends(get_service)
 ):
     """Add item to watchlist."""
-    item = service.add(
+    item, created = service.add(
         tmdb_id=data.tmdb_id,
         media_type=data.media_type,
         notes=data.notes,
         selected_seasons=data.selected_seasons,
         is_season_update=data.is_season_update
     )
+    if not created:
+        response.status_code = 200
 
     tmdb = TMDBClient(api_key=settings.tmdb_api_key)
     return await _enrich_watchlist_item(item, tmdb)
@@ -141,8 +144,9 @@ async def process_watchlist_items(
 async def delete_watchlist_items(
     request: BatchDeleteRequest, service: WatchlistService = Depends(get_service)
 ):
-    """Delete multiple watchlist items by TMDB ID."""
-    count = service.delete_batch(request.ids)
+    """Delete multiple watchlist items by (TMDB id, media type)."""
+    items = [(i.tmdb_id, i.media_type) for i in request.items]
+    count = service.delete_batch(items)
     return {"deleted": count}
 
 
@@ -153,7 +157,7 @@ async def update_watchlist_seasons(
     service: WatchlistService = Depends(get_service)
 ):
     """Update selected seasons for a watchlist item."""
-    item = service.update_seasons(tmdb_id, data.selected_seasons)
+    item = service.update_seasons(tmdb_id, "show", data.selected_seasons)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 

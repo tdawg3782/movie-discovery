@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.models import Watchlist  # noqa: F401
 from app.database import Base, get_db
 from app.main import app as fastapi_app
+from app.modules.watchlist.router import _parse_seasons
 
 
 @pytest.fixture
@@ -181,3 +182,38 @@ def test_get_watchlist_items_include_priority_and_tags(client):
     item = response.json()["items"][0]
     assert "priority" in item
     assert "tags" in item
+
+
+def test_readd_with_season_intent_returns_200(client):
+    """Re-adding an existing show with season intent returns 200, not 201."""
+    first = client.post("/api/watchlist", json={
+        "tmdb_id": 1399, "media_type": "show", "selected_seasons": [1, 2]
+    })
+    assert first.status_code == 201
+
+    second = client.post("/api/watchlist", json={
+        "tmdb_id": 1399, "media_type": "show",
+        "selected_seasons": [3], "is_season_update": True
+    })
+    assert second.status_code == 200
+    assert second.json()["tmdb_id"] == 1399
+
+
+def test_first_add_returns_201_and_persists(client):
+    """First-time add returns 201 and the row is persisted."""
+    response = client.post("/api/watchlist", json={"tmdb_id": 1400, "media_type": "movie"})
+    assert response.status_code == 201
+    listing = client.get("/api/watchlist")
+    assert any(i["tmdb_id"] == 1400 for i in listing.json()["items"])
+
+
+def test_parse_seasons_quoted_string_returns_none():
+    assert _parse_seasons('"5"') is None
+
+
+def test_parse_seasons_bare_int_returns_none():
+    assert _parse_seasons('5') is None
+
+
+def test_parse_seasons_list_returns_list():
+    assert _parse_seasons('[1, 2]') == [1, 2]

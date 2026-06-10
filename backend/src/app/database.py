@@ -34,6 +34,10 @@ def _migrate_watchlist_columns(bind=engine) -> None:
         return
     existing = {c["name"] for c in inspector.get_columns("watchlist")}
     stmts = []
+    if "selected_seasons" not in existing:
+        stmts.append("ALTER TABLE watchlist ADD COLUMN selected_seasons TEXT")
+    if "is_season_update" not in existing:
+        stmts.append("ALTER TABLE watchlist ADD COLUMN is_season_update BOOLEAN NOT NULL DEFAULT 0")
     if "priority" not in existing:
         stmts.append("ALTER TABLE watchlist ADD COLUMN priority INTEGER NOT NULL DEFAULT 0")
     if "tags" not in existing:
