@@ -2,14 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from httpx import HTTPStatusError, TimeoutException
 
-from app.config import settings
+from app.modules.clients import get_sonarr_client
 from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse, BatchStatusRequest, BatchStatusResponse
 from .client import SonarrClient
-
-
-def get_sonarr_client() -> SonarrClient:
-    """Dependency to get Sonarr client instance."""
-    return SonarrClient(url=settings.sonarr_url, api_key=settings.sonarr_api_key)
 
 
 router = APIRouter(prefix="/api/sonarr", tags=["sonarr"])

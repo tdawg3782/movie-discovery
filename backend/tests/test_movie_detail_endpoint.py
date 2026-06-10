@@ -54,7 +54,7 @@ class TestGetMovieDetail:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_movie_detail",
+            "app.modules.clients.tmdb_client.get_movie_detail",
             new_callable=AsyncMock,
         ) as mock, patch(
             "app.modules.discovery.router.get_setting",
@@ -80,7 +80,7 @@ class TestGetMovieDetail:
     def test_returns_404_for_invalid_id(self, client):
         """Should return 404 for non-existent movie."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_movie_detail",
+            "app.modules.clients.tmdb_client.get_movie_detail",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = None

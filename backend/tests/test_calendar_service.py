@@ -34,6 +34,56 @@ def test_normalize_sonarr_builds_episode_entry():
     assert entry["tmdb_id"] == 42
 
 
+def test_normalize_sonarr_missing_season_number_degrades():
+    """Missing seasonNumber: entry emitted with degraded subtitle (episode_title), no raise."""
+    records = [
+        {
+            "airDateUtc": "2026-06-10T01:00:00Z",
+            "series": {"title": "My Show", "tmdbId": 42},
+            "episodeNumber": 5,
+            "title": "Special Episode",
+        }
+    ]
+
+    entries = service.normalize_sonarr(records)
+
+    assert len(entries) == 1
+    assert entries[0]["subtitle"] == "Special Episode"
+    assert entries[0]["title"] == "My Show"
+
+
+def test_normalize_sonarr_missing_episode_number_degrades():
+    """Missing episodeNumber: entry emitted with degraded subtitle (episode_title), no raise."""
+    records = [
+        {
+            "airDateUtc": "2026-06-10T01:00:00Z",
+            "series": {"title": "My Show", "tmdbId": 42},
+            "seasonNumber": 2,
+            "title": "Announced Episode",
+        }
+    ]
+
+    entries = service.normalize_sonarr(records)
+
+    assert len(entries) == 1
+    assert entries[0]["subtitle"] == "Announced Episode"
+
+
+def test_normalize_sonarr_missing_both_and_no_title_subtitle_none():
+    """Missing both numbers and no title: entry emitted with subtitle None, no raise."""
+    records = [
+        {
+            "airDateUtc": "2026-06-10T01:00:00Z",
+            "series": {"title": "My Show", "tmdbId": 42},
+        }
+    ]
+
+    entries = service.normalize_sonarr(records)
+
+    assert len(entries) == 1
+    assert entries[0]["subtitle"] is None
+
+
 def test_normalize_radarr_picks_soonest_in_window_and_skips_past():
     """Radarr normalizer picks soonest date >= start; skips records with no in-window date."""
     records = [

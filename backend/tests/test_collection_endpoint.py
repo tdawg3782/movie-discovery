@@ -30,7 +30,7 @@ class TestGetCollection:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_collection",
+            "app.modules.clients.tmdb_client.get_collection",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -48,7 +48,7 @@ class TestGetCollection:
     def test_returns_404_for_invalid_id(self, client):
         """Should return 404 for non-existent collection."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_collection",
+            "app.modules.clients.tmdb_client.get_collection",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = None

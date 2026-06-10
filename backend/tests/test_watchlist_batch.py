@@ -11,6 +11,29 @@ from app.database import Base, get_db
 from app.main import app as fastapi_app
 
 
+@pytest.fixture(autouse=True)
+def mock_get_details():
+    """Make watchlist enrichment deterministic so POST/GET return 2xx.
+
+    Does not touch the get_sonarr_client/get_radarr_client service-path mocks.
+    """
+    with patch(
+        "app.modules.clients.tmdb_client.get_details",
+        new_callable=AsyncMock,
+        return_value={
+            "title": "Mock",
+            "name": "Mock",
+            "overview": "",
+            "poster_path": None,
+            "release_date": None,
+            "first_air_date": None,
+            "vote_average": 1.0,
+            "number_of_seasons": 1,
+        },
+    ) as mock:
+        yield mock
+
+
 @pytest.fixture
 def client():
     """Create a test client with an in-memory SQLite database."""
@@ -267,16 +290,12 @@ async def test_batch_process_season_update(db):
 
     service = WatchlistService(db)
 
-    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
-        mock_instance = MockClient.return_value
+    with patch("app.modules.watchlist.service.get_sonarr_client", new_callable=AsyncMock) as mock_get_client:
+        mock_instance = mock_get_client.return_value
         mock_instance.update_season_monitoring = AsyncMock(return_value={"id": 1})
 
-        with patch("app.modules.watchlist.service.settings") as mock_settings:
-            mock_settings.sonarr_url = "http://localhost:8989"
-            mock_settings.sonarr_api_key = "test"
-
-            with patch("app.modules.watchlist.service.get_setting", return_value=None):
-                processed, failed = await service.process_batch([1396], "tv")
+        with patch("app.modules.watchlist.service.get_setting", return_value=None):
+            processed, failed = await service.process_batch([1396], "tv")
 
     assert 1396 in processed
     mock_instance.update_season_monitoring.assert_called_once_with(1396, [4, 5])
@@ -296,16 +315,12 @@ async def test_batch_process_new_series(db):
 
     service = WatchlistService(db)
 
-    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
-        mock_instance = MockClient.return_value
+    with patch("app.modules.watchlist.service.get_sonarr_client", new_callable=AsyncMock) as mock_get_client:
+        mock_instance = mock_get_client.return_value
         mock_instance.add_series = AsyncMock(return_value={"id": 1, "title": "Test"})
 
-        with patch("app.modules.watchlist.service.settings") as mock_settings:
-            mock_settings.sonarr_url = "http://localhost:8989"
-            mock_settings.sonarr_api_key = "test"
-
-            with patch("app.modules.watchlist.service.get_setting", return_value="/tv"):
-                processed, failed = await service.process_batch([1234], "tv")
+        with patch("app.modules.watchlist.service.get_setting", return_value="/tv"):
+            processed, failed = await service.process_batch([1234], "tv")
 
     assert 1234 in processed
     mock_instance.add_series.assert_called_once()
@@ -325,16 +340,12 @@ async def test_batch_process_season_update_all_seasons_none(db):
 
     service = WatchlistService(db)
 
-    with patch("app.modules.watchlist.service.SonarrClient") as MockClient:
-        mock_instance = MockClient.return_value
+    with patch("app.modules.watchlist.service.get_sonarr_client", new_callable=AsyncMock) as mock_get_client:
+        mock_instance = mock_get_client.return_value
         mock_instance.update_season_monitoring = AsyncMock(return_value={"id": 1})
 
-        with patch("app.modules.watchlist.service.settings") as mock_settings:
-            mock_settings.sonarr_url = "http://localhost:8989"
-            mock_settings.sonarr_api_key = "test"
-
-            with patch("app.modules.watchlist.service.get_setting", return_value=None):
-                processed, failed = await service.process_batch([1396], "tv")
+        with patch("app.modules.watchlist.service.get_setting", return_value=None):
+            processed, failed = await service.process_batch([1396], "tv")
 
     assert 1396 in processed
     assert failed == []

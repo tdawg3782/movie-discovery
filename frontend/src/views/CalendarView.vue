@@ -2,6 +2,10 @@
   <div class="calendar-view">
     <h1>Coming Soon</h1>
 
+    <div v-if="degraded.length" class="degraded-banner">
+      ⚠ {{ degraded.join('/') }} unreachable — showing partial results
+    </div>
+
     <div v-if="loading" class="loading">Loading...</div>
 
     <div v-else-if="groups.length === 0" class="empty">
@@ -40,6 +44,7 @@ import { groupByDate } from '@/utils/calendarState'
 
 const loading = ref(true)
 const items = ref([])
+const degraded = ref([])
 
 const groups = computed(() => groupByDate(items.value))
 
@@ -48,6 +53,7 @@ onMounted(async () => {
   try {
     const data = await calendarService.getCalendar()
     items.value = data.items || []
+    degraded.value = data.degraded || []
   } catch (error) {
     console.error('Failed to load calendar:', error)
   } finally {
@@ -59,6 +65,15 @@ onMounted(async () => {
 <style scoped>
 .calendar-view h1 {
   margin-bottom: 20px;
+}
+
+.degraded-banner {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #4d3a1f;
+  color: #f0c674;
+  font-size: 0.85rem;
 }
 
 .loading,

@@ -36,7 +36,7 @@ class TestDiscoverMoviesWithFilters:
     def test_discover_movies_with_genre(self, client, mock_discover_response):
         """Discover movies filtered by genre."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.discover_movies",
+            "app.modules.clients.tmdb_client.discover_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_discover_response
@@ -53,7 +53,7 @@ class TestDiscoverMoviesWithFilters:
     def test_discover_movies_with_year(self, client, mock_discover_response):
         """Discover movies filtered by year."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.discover_movies",
+            "app.modules.clients.tmdb_client.discover_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_discover_response
@@ -66,7 +66,7 @@ class TestDiscoverMoviesWithFilters:
     def test_discover_movies_with_rating(self, client, mock_discover_response):
         """Discover movies filtered by minimum rating."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.discover_movies",
+            "app.modules.clients.tmdb_client.discover_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_discover_response
@@ -80,7 +80,7 @@ class TestDiscoverMoviesWithFilters:
     def test_discover_movies_with_sort(self, client, mock_discover_response):
         """Discover movies with custom sort."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.discover_movies",
+            "app.modules.clients.tmdb_client.discover_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_discover_response
@@ -113,7 +113,7 @@ class TestDiscoverShowsWithFilters:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.discover_shows",
+            "app.modules.clients.tmdb_client.discover_shows",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response

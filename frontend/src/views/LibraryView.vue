@@ -10,6 +10,10 @@
       </div>
     </div>
 
+    <div v-if="degraded.length" class="degraded-banner">
+      ⚠ {{ degraded.join('/') }} unreachable — showing partial results
+    </div>
+
     <!-- Tabs -->
     <div class="tabs">
       <button
@@ -120,6 +124,7 @@ const autoRefresh = ref(false)
 
 const activity = ref({ movies: [], shows: [] })
 const queue = ref({ movies: [], shows: [] })
+const degraded = ref([])
 
 let refreshInterval = null
 
@@ -151,6 +156,9 @@ async function loadData() {
     ])
     activity.value = activityData
     queue.value = queueData
+    degraded.value = [
+      ...new Set([...(activityData.degraded || []), ...(queueData.degraded || [])])
+    ]
   } catch (error) {
     console.error('Failed to load library data:', error)
   } finally {
@@ -200,6 +208,15 @@ function formatDate(dateStr) {
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+}
+
+.degraded-banner {
+  margin-bottom: 1rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #4d3a1f;
+  color: #f0c674;
+  font-size: 0.85rem;
 }
 
 .library-header {

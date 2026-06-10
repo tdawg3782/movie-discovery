@@ -53,7 +53,7 @@ class TestGetShowDetail:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_show_detail",
+            "app.modules.clients.tmdb_client.get_show_detail",
             new_callable=AsyncMock,
         ) as mock, patch(
             "app.modules.discovery.router.get_setting",
@@ -79,7 +79,7 @@ class TestGetShowDetail:
     def test_returns_404_for_invalid_id(self, client):
         """Should return 404 for non-existent show."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_show_detail",
+            "app.modules.clients.tmdb_client.get_show_detail",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = None

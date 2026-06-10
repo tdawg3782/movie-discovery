@@ -2,6 +2,7 @@
 import types
 
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
@@ -52,14 +53,14 @@ WINDOW = "?start=2026-06-06&end=2026-06-13"
 
 
 def test_empty_everything_returns_empty_items(client, mock_radarr, mock_sonarr):
-    """All sources empty -> {"items": []}."""
+    """All sources empty -> {"items": [], "degraded": []}."""
     mock_radarr.get_calendar.return_value = []
     mock_sonarr.get_calendar.return_value = []
 
     response = client.get(f"/api/calendar{WINDOW}")
 
     assert response.status_code == 200
-    assert response.json() == {"items": []}
+    assert response.json() == {"items": [], "degraded": []}
 
 
 def test_sonarr_and_radarr_records_sorted(client, mock_radarr, mock_sonarr):
@@ -107,7 +108,7 @@ def test_watchlist_movie_resolved_via_tmdb(client, mock_radarr, mock_sonarr, wat
     )
 
     with patch(
-        "app.modules.calendar.router.tmdb_client.get_details",
+        "app.modules.clients.tmdb_client.get_details",
         new_callable=AsyncMock,
         return_value={"title": "Future Film", "release_date": "2026-06-10"},
     ):
@@ -122,3 +123,77 @@ def test_watchlist_movie_resolved_via_tmdb(client, mock_radarr, mock_sonarr, wat
     assert entry["title"] == "Future Film"
     assert entry["tmdb_id"] == 99
     assert entry["date"] == "2026-06-10"
+
+
+def test_sonarr_down_serves_partial_with_degraded(
+    client, mock_radarr, mock_sonarr, watchlist_rows
+):
+    """Sonarr unreachable -> 200, radarr + watchlist items still present, degraded=['sonarr']."""
+    mock_radarr.get_calendar.return_value = [
+        {"title": "My Movie", "tmdbId": 7, "digitalRelease": "2026-06-10T00:00:00Z"}
+    ]
+    mock_sonarr.get_calendar.side_effect = httpx.ConnectError("boom")
+    watchlist_rows.append(
+        types.SimpleNamespace(tmdb_id=99, media_type="movie", status="pending")
+    )
+
+    with patch(
+        "app.modules.clients.tmdb_client.get_details",
+        new_callable=AsyncMock,
+        return_value={"title": "Future Film", "release_date": "2026-06-11"},
+    ):
+        response = client.get(f"/api/calendar{WINDOW}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["degraded"] == ["sonarr"]
+    sources = {i["source"] for i in body["items"]}
+    assert sources == {"radarr", "watchlist"}
+
+
+def test_radarr_down_serves_partial_with_degraded(client, mock_radarr, mock_sonarr):
+    """Radarr unreachable -> 200, sonarr item still present, degraded=['radarr']."""
+    mock_radarr.get_calendar.side_effect = httpx.ConnectError("boom")
+    mock_sonarr.get_calendar.return_value = [
+        {
+            "airDateUtc": "2026-06-12T01:00:00Z",
+            "series": {"title": "My Show", "tmdbId": 42},
+            "seasonNumber": 2,
+            "episodeNumber": 5,
+            "title": "Pilot",
+        }
+    ]
+
+    response = client.get(f"/api/calendar{WINDOW}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["degraded"] == ["radarr"]
+    assert [i["source"] for i in body["items"]] == ["sonarr"]
+
+
+def test_watchlist_added_status_excluded(
+    client, mock_radarr, mock_sonarr, watchlist_rows
+):
+    """A processed (status='added') movie yields no agenda entry; 'pending' still does."""
+    mock_radarr.get_calendar.return_value = []
+    mock_sonarr.get_calendar.return_value = []
+    watchlist_rows.append(
+        types.SimpleNamespace(tmdb_id=55, media_type="movie", status="added")
+    )
+    watchlist_rows.append(
+        types.SimpleNamespace(tmdb_id=99, media_type="movie", status="pending")
+    )
+
+    with patch(
+        "app.modules.clients.tmdb_client.get_details",
+        new_callable=AsyncMock,
+        return_value={"title": "Future Film", "release_date": "2026-06-10"},
+    ):
+        response = client.get(f"/api/calendar{WINDOW}")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["source"] == "watchlist"
+    assert items[0]["tmdb_id"] == 99

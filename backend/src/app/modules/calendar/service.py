@@ -35,10 +35,15 @@ def normalize_sonarr(records: list[dict]) -> list[dict]:
         )
         series = record.get("series") or {}
         title = series.get("title") or record.get("seriesTitle")
-        season_number = record.get("seasonNumber")
-        episode_number = record.get("episodeNumber")
+        sn = record.get("seasonNumber")
+        en = record.get("episodeNumber")
         episode_title = record.get("title")
-        subtitle = f"S{season_number:02d}E{episode_number:02d} · {episode_title}"
+        if isinstance(sn, int) and isinstance(en, int):
+            subtitle = f"S{sn:02d}E{en:02d}"
+            if episode_title:
+                subtitle += f" · {episode_title}"
+        else:
+            subtitle = episode_title or None
         entries.append(
             {
                 "date": entry_date,

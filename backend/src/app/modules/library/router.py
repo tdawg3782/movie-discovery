@@ -1,5 +1,6 @@
 """Library API routes for combined Radarr/Sonarr data."""
 import asyncio
+import logging
 from fastapi import APIRouter, Depends, Query
 
 from app.modules.radarr.router import get_radarr_client
@@ -7,6 +8,8 @@ from app.modules.sonarr.router import get_sonarr_client
 from app.modules.radarr.client import RadarrClient
 from app.modules.sonarr.client import SonarrClient
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/library", tags=["library"])
 
@@ -22,11 +25,23 @@ async def get_library_activity(
     movies, shows = await asyncio.gather(
         radarr.get_recent(limit),
         sonarr.get_recent(limit),
+        return_exceptions=True,
     )
+
+    degraded: list[str] = []
+    if isinstance(movies, Exception):
+        logger.warning("Radarr activity unavailable; serving partial library activity")
+        movies = []
+        degraded.append("radarr")
+    if isinstance(shows, Exception):
+        logger.warning("Sonarr activity unavailable; serving partial library activity")
+        shows = []
+        degraded.append("sonarr")
 
     return {
         "movies": movies,
-        "shows": shows
+        "shows": shows,
+        "degraded": degraded,
     }
 
 
@@ -40,9 +55,21 @@ async def get_combined_queue(
     radarr_queue, sonarr_queue = await asyncio.gather(
         radarr.get_queue(),
         sonarr.get_queue(),
+        return_exceptions=True,
     )
+
+    degraded: list[str] = []
+    if isinstance(radarr_queue, Exception):
+        logger.warning("Radarr queue unavailable; serving partial download queue")
+        radarr_queue = {"records": []}
+        degraded.append("radarr")
+    if isinstance(sonarr_queue, Exception):
+        logger.warning("Sonarr queue unavailable; serving partial download queue")
+        sonarr_queue = {"records": []}
+        degraded.append("sonarr")
 
     return {
         "movies": radarr_queue.get("records", []),
-        "shows": sonarr_queue.get("records", [])
+        "shows": sonarr_queue.get("records", []),
+        "degraded": degraded,
     }

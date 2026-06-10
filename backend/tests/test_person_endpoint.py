@@ -32,7 +32,7 @@ class TestGetPerson:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_person",
+            "app.modules.clients.tmdb_client.get_person",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -50,7 +50,7 @@ class TestGetPerson:
     def test_returns_404_for_invalid_id(self, client):
         """Should return 404 for non-existent person."""
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_person",
+            "app.modules.clients.tmdb_client.get_person",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = None

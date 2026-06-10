@@ -2,6 +2,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
+import httpx
 
 from app.main import app
 from app.modules.radarr.router import get_radarr_client
@@ -19,6 +20,14 @@ def client(mock_radarr_client):
     """Create test client with mocked Radarr client dependency."""
     app.dependency_overrides[get_radarr_client] = lambda: mock_radarr_client
     yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def error_client(mock_radarr_client):
+    """Test client that surfaces global exception handlers instead of re-raising."""
+    app.dependency_overrides[get_radarr_client] = lambda: mock_radarr_client
+    yield TestClient(app, raise_server_exceptions=False)
     app.dependency_overrides.clear()
 
 
@@ -140,3 +149,42 @@ def test_get_quality_profiles(client, mock_radarr_client):
         {"id": 1, "name": "Any"},
         {"id": 4, "name": "HD-1080p"},
     ]
+
+def test_queue_connect_error_returns_503(error_client, mock_radarr_client):
+    """Unreachable Radarr (ConnectError) on queue maps to 503 via global net."""
+    mock_radarr_client.get_queue.side_effect = httpx.ConnectError("refused")
+
+    response = error_client.get("/api/radarr/queue")
+
+    assert response.status_code == 503
+    assert "refused" not in response.text
+
+
+def test_recent_connect_error_returns_503(error_client, mock_radarr_client):
+    """Unreachable Radarr (ConnectError) on recent maps to 503 via global net."""
+    mock_radarr_client.get_recent.side_effect = httpx.ConnectError("refused")
+
+    response = error_client.get("/api/radarr/recent")
+
+    assert response.status_code == 503
+    assert "refused" not in response.text
+
+
+def test_status_connect_error_returns_503(error_client, mock_radarr_client):
+    """Unreachable Radarr (ConnectError) on status maps to 503 via global net."""
+    mock_radarr_client.get_status.side_effect = httpx.ConnectError("refused")
+
+    response = error_client.get("/api/radarr/status/1")
+
+    assert response.status_code == 503
+    assert "refused" not in response.text
+
+
+def test_queue_timeout_returns_504(error_client, mock_radarr_client):
+    """Slow Radarr (TimeoutException) on queue maps to 504 via global net."""
+    mock_radarr_client.get_queue.side_effect = httpx.TimeoutException("slow")
+
+    response = error_client.get("/api/radarr/queue")
+
+    assert response.status_code == 504
+    assert "slow" not in response.text

@@ -2,14 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from httpx import HTTPStatusError, TimeoutException
 
-from app.config import settings
+from app.modules.clients import get_radarr_client
 from app.schemas import AddMediaRequest, AddMediaResponse, LibraryStatusResponse, BatchStatusRequest, BatchStatusResponse
 from .client import RadarrClient
-
-
-def get_radarr_client() -> RadarrClient:
-    """Dependency to get Radarr client instance."""
-    return RadarrClient(url=settings.radarr_url, api_key=settings.radarr_api_key)
 
 
 router = APIRouter(prefix="/api/radarr", tags=["radarr"])

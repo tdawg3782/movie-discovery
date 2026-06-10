@@ -5,9 +5,8 @@ from sqlalchemy import tuple_
 from sqlalchemy.orm import Session
 
 from app.models import Watchlist
-from app.config import settings, get_setting
-from app.modules.radarr.client import RadarrClient
-from app.modules.sonarr.client import SonarrClient
+from app.config import get_setting
+from app.modules.clients import get_radarr_client, get_sonarr_client
 
 
 class WatchlistService:
@@ -140,11 +139,11 @@ class WatchlistService:
 
         # Create clients once, cache settings outside loop
         if media_type == "movie":
-            client = RadarrClient(settings.radarr_url, settings.radarr_api_key)
+            client = await get_radarr_client()
             root_folder = get_setting("radarr_root_folder")
             quality_profile_id = get_setting("radarr_quality_profile_id")
         else:
-            client = SonarrClient(settings.sonarr_url, settings.sonarr_api_key)
+            client = await get_sonarr_client()
             root_folder = get_setting("sonarr_root_folder")
             quality_profile_id = get_setting("sonarr_quality_profile_id")
         try:

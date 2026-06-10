@@ -2,8 +2,10 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.database import init_db
 from app.modules.discovery import router as discovery_router, genres_router
@@ -14,6 +16,7 @@ from app.modules.settings.router import router as settings_router
 from app.modules.library import router as library_router
 from app.modules.calendar import router as calendar_router
 from app.modules.recommendations import router as recommendations_router
+from app.modules.clients import close_all_clients
 
 
 @asynccontextmanager
@@ -23,6 +26,7 @@ async def lifespan(app: FastAPI):
     os.makedirs("data", exist_ok=True)
     init_db()
     yield
+    await close_all_clients()
 
 
 app = FastAPI(
@@ -39,6 +43,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(httpx.TimeoutException)
+async def upstream_timeout_handler(
+    request: Request, exc: httpx.TimeoutException
+) -> JSONResponse:
+    """Safety net: a slow external service (Radarr/Sonarr) -> 504, not raw 500."""
+    return JSONResponse(
+        status_code=504, content={"detail": "Upstream service timed out"}
+    )
+
+
+@app.exception_handler(httpx.RequestError)
+async def upstream_unreachable_handler(
+    request: Request, exc: httpx.RequestError
+) -> JSONResponse:
+    """Safety net: an unreachable external service (e.g. ConnectError) -> 503."""
+    return JSONResponse(
+        status_code=503, content={"detail": "Upstream service unreachable"}
+    )
+
+
+@app.exception_handler(httpx.HTTPStatusError)
+async def upstream_error_handler(
+    request: Request, exc: httpx.HTTPStatusError
+) -> JSONResponse:
+    """Safety net: an error status from an external service -> 502."""
+    return JSONResponse(
+        status_code=502, content={"detail": "Upstream service error"}
+    )
 
 
 # Include routers

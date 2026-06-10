@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas import WatchlistAdd, WatchlistItem, WatchlistResponse
-from app.config import settings
-from app.modules.discovery.tmdb_client import TMDBClient
+from app.modules.discovery.tmdb_client import TMDBClient, TMDBClientError, TMDBAPIError
+from app.modules.clients import get_tmdb_client
 from .service import WatchlistService
 from .schemas import BatchProcessRequest, BatchProcessResponse, BatchDeleteRequest
 
@@ -81,7 +81,9 @@ async def _enrich_watchlist_item(item, tmdb: TMDBClient) -> WatchlistItem:
             priority=item.priority,
             tags=_parse_tags(item.tags),
         )
-    except Exception:
+    except TMDBAPIError as e:
+        if e.status_code != 404:
+            raise
         return WatchlistItem(
             id=item.id,
             tmdb_id=item.tmdb_id,
@@ -105,8 +107,11 @@ async def get_watchlist(service: WatchlistService = Depends(get_service)):
     if not items:
         return WatchlistResponse(items=[], total=0)
 
-    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
-    enriched_items = await asyncio.gather(*[_enrich_watchlist_item(item, tmdb) for item in items])
+    tmdb = get_tmdb_client()
+    try:
+        enriched_items = await asyncio.gather(*[_enrich_watchlist_item(item, tmdb) for item in items])
+    except TMDBClientError:
+        raise HTTPException(status_code=502, detail="TMDB unavailable")
 
     return WatchlistResponse(items=list(enriched_items), total=len(enriched_items))
 
@@ -126,8 +131,11 @@ async def add_to_watchlist(
     if not created:
         response.status_code = 200
 
-    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
-    return await _enrich_watchlist_item(item, tmdb)
+    tmdb = get_tmdb_client()
+    try:
+        return await _enrich_watchlist_item(item, tmdb)
+    except TMDBClientError:
+        raise HTTPException(status_code=502, detail="TMDB unavailable")
 
 
 # Batch endpoints must come BEFORE parameterized endpoints
@@ -171,8 +179,11 @@ async def update_watchlist_details(item_id: int, data: UpdateDetailsRequest,
     item = service.update_details(item_id, fields)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    tmdb = TMDBClient(api_key=settings.tmdb_api_key)
-    return await _enrich_watchlist_item(item, tmdb)
+    tmdb = get_tmdb_client()
+    try:
+        return await _enrich_watchlist_item(item, tmdb)
+    except TMDBClientError:
+        raise HTTPException(status_code=502, detail="TMDB unavailable")
 
 
 # Parameterized endpoint must come AFTER specific endpoints

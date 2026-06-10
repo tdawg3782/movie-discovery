@@ -33,7 +33,7 @@ class TestGetTrendingMovies:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_trending_movies",
+            "app.modules.clients.tmdb_client.get_trending_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -58,7 +58,7 @@ class TestGetTrendingMovies:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_trending_movies",
+            "app.modules.clients.tmdb_client.get_trending_movies",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -91,7 +91,7 @@ class TestGetTrendingShows:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_trending_shows",
+            "app.modules.clients.tmdb_client.get_trending_shows",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -129,7 +129,7 @@ class TestSearch:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.search",
+            "app.modules.clients.tmdb_client.search",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -154,7 +154,7 @@ class TestSearch:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.search",
+            "app.modules.clients.tmdb_client.search",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -195,7 +195,7 @@ class TestGetSimilar:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_similar",
+            "app.modules.clients.tmdb_client.get_similar",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -217,7 +217,7 @@ class TestGetSimilar:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_similar",
+            "app.modules.clients.tmdb_client.get_similar",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response

@@ -1,6 +1,8 @@
 """Tests for the For You recommendations aggregating endpoint."""
+import logging
 import types
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
@@ -12,6 +14,7 @@ from app.modules.watchlist.router import get_service
 from app.modules.radarr.client import RadarrClient
 from app.modules.sonarr.client import SonarrClient
 from app.modules.recommendations.router import reset_cache
+from app.modules.discovery.tmdb_client import TMDBNetworkError
 
 
 class FakeWatchlistService:
@@ -57,7 +60,7 @@ def test_empty_local_data_returns_empty_and_no_tmdb_calls(client, mock_radarr, m
     mock_sonarr.get_all_series.return_value = []
 
     with patch(
-        "app.modules.recommendations.router.tmdb_client.get_recommendations",
+        "app.modules.clients.tmdb_client.get_recommendations",
         new_callable=AsyncMock,
     ) as mock_get_recs:
         mock_get_recs.return_value = {
@@ -79,7 +82,7 @@ def test_watchlist_seed_returns_recs_excluding_seed(
     mock_sonarr.get_all_series.return_value = []
 
     with patch(
-        "app.modules.recommendations.router.tmdb_client.get_recommendations",
+        "app.modules.clients.tmdb_client.get_recommendations",
         new_callable=AsyncMock,
     ) as mock_get_recs:
         mock_get_recs.return_value = {
@@ -105,7 +108,7 @@ def test_owned_movie_excluded_even_if_recommended(
     mock_sonarr.get_all_series.return_value = []
 
     with patch(
-        "app.modules.recommendations.router.tmdb_client.get_recommendations",
+        "app.modules.clients.tmdb_client.get_recommendations",
         new_callable=AsyncMock,
     ) as mock_get_recs:
         mock_get_recs.return_value = {
@@ -127,7 +130,7 @@ def test_arr_down_still_returns_watchlist_recs(
     mock_sonarr.get_all_series.side_effect = Exception("down")
 
     with patch(
-        "app.modules.recommendations.router.tmdb_client.get_recommendations",
+        "app.modules.clients.tmdb_client.get_recommendations",
         new_callable=AsyncMock,
     ) as mock_get_recs:
         mock_get_recs.return_value = {
@@ -149,7 +152,7 @@ def test_cache_hit_skips_tmdb_and_refresh_bypasses(
     mock_sonarr.get_all_series.return_value = []
 
     with patch(
-        "app.modules.recommendations.router.tmdb_client.get_recommendations",
+        "app.modules.clients.tmdb_client.get_recommendations",
         new_callable=AsyncMock,
     ) as mock_get_recs:
         mock_get_recs.return_value = {
@@ -167,4 +170,68 @@ def test_cache_hit_skips_tmdb_and_refresh_bypasses(
 
         third = client.get("/api/for-you?refresh=true")
         assert third.status_code == 200
+        assert mock_get_recs.call_count > after_first
+
+
+def test_tmdb_all_fail_returns_empty_but_not_cached(
+    client, mock_radarr, mock_sonarr, watchlist_rows
+):
+    """All TMDB rec calls failing -> empty result (200) that is NOT cached.
+
+    A second request once TMDB is healthy must recompute and return real data,
+    proving a transient blip does not poison the 6h cache with an empty list.
+    """
+    watchlist_rows.append(types.SimpleNamespace(tmdb_id=5, media_type="movie"))
+    mock_radarr.get_all_movies.return_value = []
+    mock_sonarr.get_all_series.return_value = []
+
+    with patch(
+        "app.modules.clients.tmdb_client.get_recommendations",
+        new_callable=AsyncMock,
+    ) as mock_get_recs:
+        mock_get_recs.side_effect = TMDBNetworkError("tmdb down")
+        first = client.get("/api/for-you")
+        assert first.status_code == 200
+        assert first.json()["results"] == []
+
+        mock_get_recs.side_effect = None
+        mock_get_recs.return_value = {
+            "results": [{"id": 9, "title": "Rec", "vote_average": 7.0, "popularity": 10}]
+        }
+        second = client.get("/api/for-you")
+        assert second.status_code == 200
+        ids = [r["tmdb_id"] for r in second.json()["results"]]
+        assert 9 in ids
+
+
+def test_arr_failure_served_but_not_cached_and_warns(
+    client, mock_radarr, mock_sonarr, watchlist_rows, caplog
+):
+    """An arr fetch raising -> recs still served (200) but result is NOT cached and a
+    warning is logged; a later healthy request recomputes rather than serving a cache hit.
+    """
+    watchlist_rows.append(types.SimpleNamespace(tmdb_id=5, media_type="movie"))
+    mock_radarr.get_all_movies.side_effect = httpx.ConnectError("boom")
+    mock_sonarr.get_all_series.return_value = []
+
+    with patch(
+        "app.modules.clients.tmdb_client.get_recommendations",
+        new_callable=AsyncMock,
+    ) as mock_get_recs:
+        mock_get_recs.return_value = {
+            "results": [{"id": 9, "title": "Rec", "vote_average": 7.0, "popularity": 10}]
+        }
+        with caplog.at_level(logging.WARNING):
+            first = client.get("/api/for-you")
+        assert first.status_code == 200
+        ids = [r["tmdb_id"] for r in first.json()["results"]]
+        assert 9 in ids
+        after_first = mock_get_recs.call_count
+        assert after_first > 0
+        assert any(rec.levelno == logging.WARNING for rec in caplog.records)
+
+        mock_radarr.get_all_movies.side_effect = None
+        mock_radarr.get_all_movies.return_value = []
+        second = client.get("/api/for-you")
+        assert second.status_code == 200
         assert mock_get_recs.call_count > after_first

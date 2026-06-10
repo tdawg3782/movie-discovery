@@ -1,4 +1,5 @@
 """Application configuration via environment variables."""
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -41,16 +42,20 @@ def get_setting(key: str) -> Optional[str]:
     """Get a setting value, checking database first, then .env fallback."""
     from app.database import SessionLocal
     from app.modules.settings.service import SettingsService
+    from sqlalchemy.exc import SQLAlchemyError
+    from cryptography.fernet import InvalidToken
 
+    db = SessionLocal()
     try:
-        db = SessionLocal()
-        service = SettingsService(db)
-        value = service.get_raw_value(key)
-        db.close()
+        value = SettingsService(db).get_raw_value(key)
         if value:
             return value
-    except Exception:
-        pass
+    except (SQLAlchemyError, InvalidToken) as exc:
+        logging.getLogger(__name__).warning(
+            "get_setting(%s) DB lookup failed: %s", key, exc
+        )
+    finally:
+        db.close()
 
     # Fallback to .env
     env_value = getattr(settings, key, None)

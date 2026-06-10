@@ -1,15 +1,14 @@
 """Discovery API routes."""
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.config import settings, get_setting
+from app.config import get_setting
 from app.schemas import MediaList, MediaResponse
 from .tmdb_client import TMDBClient
 from .schemas import DiscoveryFilters
+from app.modules.clients import get_tmdb_client
 
 router = APIRouter(prefix="/api/discover", tags=["discovery"])
 genres_router = APIRouter(prefix="/api/genres", tags=["genres"])
-
-tmdb_client = TMDBClient(api_key=settings.tmdb_api_key)
 
 DEFAULT_REGION = "US"
 
@@ -77,16 +76,16 @@ def _build_media_list(data: dict, media_type: str) -> MediaList:
 
 
 @router.get("/movies/trending", response_model=MediaList)
-async def get_trending_movies(page: int = Query(1, ge=1)):
+async def get_trending_movies(page: int = Query(1, ge=1), tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get trending movies from TMDB."""
-    data = await tmdb_client.get_trending_movies(page=page)
+    data = await tmdb.get_trending_movies(page=page)
     return _build_media_list(data, "movie")
 
 
 @router.get("/shows/trending", response_model=MediaList)
-async def get_trending_shows(page: int = Query(1, ge=1)):
+async def get_trending_shows(page: int = Query(1, ge=1), tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get trending TV shows from TMDB."""
-    data = await tmdb_client.get_trending_shows(page=page)
+    data = await tmdb.get_trending_shows(page=page)
     return _build_media_list(data, "show")
 
 
@@ -100,6 +99,7 @@ async def discover_movies(
     rating_gte: float | None = Query(None, ge=0, le=10),
     certification: str | None = Query(None),
     sort_by: str = Query("popularity.desc"),
+    tmdb: TMDBClient = Depends(get_tmdb_client),
 ):
     """Discover movies with filters."""
     filters = DiscoveryFilters(
@@ -111,7 +111,7 @@ async def discover_movies(
         certification=certification,
         sort_by=sort_by,
     )
-    data = await tmdb_client.discover_movies(page=page, filters=filters.to_tmdb_params("movie"))
+    data = await tmdb.discover_movies(page=page, filters=filters.to_tmdb_params("movie"))
     return _build_media_list(data, "movie")
 
 
@@ -124,6 +124,7 @@ async def discover_shows(
     year_lte: int | None = Query(None),
     rating_gte: float | None = Query(None, ge=0, le=10),
     sort_by: str = Query("popularity.desc"),
+    tmdb: TMDBClient = Depends(get_tmdb_client),
 ):
     """Discover TV shows with filters."""
     filters = DiscoveryFilters(
@@ -134,14 +135,14 @@ async def discover_shows(
         rating_gte=rating_gte,
         sort_by=sort_by,
     )
-    data = await tmdb_client.discover_shows(page=page, filters=filters.to_tmdb_params("tv"))
+    data = await tmdb.discover_shows(page=page, filters=filters.to_tmdb_params("tv"))
     return _build_media_list(data, "show")
 
 
 @router.get("/search", response_model=MediaList)
-async def search(q: str = Query(..., min_length=1), page: int = Query(1, ge=1)):
+async def search(q: str = Query(..., min_length=1), page: int = Query(1, ge=1), tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Search for movies and TV shows."""
-    data = await tmdb_client.search(query=q, page=page)
+    data = await tmdb.search(query=q, page=page)
     results = []
     for item in data["results"]:
         item_type = item.get("media_type")
@@ -159,10 +160,10 @@ async def search(q: str = Query(..., min_length=1), page: int = Query(1, ge=1)):
 
 
 @router.get("/similar/{tmdb_id}", response_model=MediaList)
-async def get_similar(tmdb_id: int, media_type: str = Query(...)):
+async def get_similar(tmdb_id: int, media_type: str = Query(...), tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get similar movies or shows."""
     api_media_type = "tv" if media_type == "show" else media_type
-    data = await tmdb_client.get_similar(tmdb_id=tmdb_id, media_type=api_media_type)
+    data = await tmdb.get_similar(tmdb_id=tmdb_id, media_type=api_media_type)
     return MediaList(
         results=[_transform_tmdb_result(item, media_type) for item in data["results"]],
         page=1,
@@ -173,31 +174,31 @@ async def get_similar(tmdb_id: int, media_type: str = Query(...)):
 
 # Genre endpoints
 @genres_router.get("/movies")
-async def get_movie_genres():
+async def get_movie_genres(tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get list of movie genres."""
-    return await tmdb_client.get_movie_genres()
+    return await tmdb.get_movie_genres()
 
 
 @genres_router.get("/shows")
-async def get_tv_genres():
+async def get_tv_genres(tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get list of TV show genres."""
-    return await tmdb_client.get_tv_genres()
+    return await tmdb.get_tv_genres()
 
 
 # Detail endpoints
 @router.get("/person/{person_id}")
-async def get_person(person_id: int):
+async def get_person(person_id: int, tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get person details with filmography."""
-    data = await tmdb_client.get_person(person_id)
+    data = await tmdb.get_person(person_id)
     if not data:
         raise HTTPException(status_code=404, detail="Person not found")
     return data
 
 
 @router.get("/movies/{movie_id}")
-async def get_movie_detail(movie_id: int):
+async def get_movie_detail(movie_id: int, tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get movie details with cast, videos, and recommendations."""
-    data = await tmdb_client.get_movie_detail(movie_id)
+    data = await tmdb.get_movie_detail(movie_id)
     if not data:
         raise HTTPException(status_code=404, detail="Movie not found")
     region = get_setting("streaming_region") or DEFAULT_REGION
@@ -207,9 +208,9 @@ async def get_movie_detail(movie_id: int):
 
 
 @router.get("/shows/{show_id}")
-async def get_show_detail(show_id: int):
+async def get_show_detail(show_id: int, tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get TV show details with cast, videos, and recommendations."""
-    data = await tmdb_client.get_show_detail(show_id)
+    data = await tmdb.get_show_detail(show_id)
     if not data:
         raise HTTPException(status_code=404, detail="Show not found")
     region = get_setting("streaming_region") or DEFAULT_REGION
@@ -219,9 +220,9 @@ async def get_show_detail(show_id: int):
 
 
 @router.get("/collection/{collection_id}")
-async def get_collection(collection_id: int):
+async def get_collection(collection_id: int, tmdb: TMDBClient = Depends(get_tmdb_client)):
     """Get collection details with all movies."""
-    data = await tmdb_client.get_collection(collection_id)
+    data = await tmdb.get_collection(collection_id)
     if not data:
         raise HTTPException(status_code=404, detail="Collection not found")
     return data

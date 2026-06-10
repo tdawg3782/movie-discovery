@@ -25,7 +25,7 @@ class TestGetMovieGenres:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_movie_genres",
+            "app.modules.clients.tmdb_client.get_movie_genres",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response
@@ -53,7 +53,7 @@ class TestGetTvGenres:
         }
 
         with patch(
-            "app.modules.discovery.router.tmdb_client.get_tv_genres",
+            "app.modules.clients.tmdb_client.get_tv_genres",
             new_callable=AsyncMock,
         ) as mock:
             mock.return_value = mock_response

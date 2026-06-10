@@ -10,6 +10,32 @@ from app.models import Watchlist  # noqa: F401
 from app.database import Base, get_db
 from app.main import app as fastapi_app
 from app.modules.watchlist.router import _parse_seasons
+from unittest.mock import patch, AsyncMock
+from app.modules.discovery.tmdb_client import TMDBAPIError, TMDBNetworkError
+
+
+@pytest.fixture(autouse=True)
+def mock_get_details():
+    """Make watchlist enrichment deterministic: get_details succeeds by default.
+
+    Yields the AsyncMock so a test can override .side_effect to drive the
+    404-placeholder or outage-502 paths. The patch is stopped after each test.
+    """
+    with patch(
+        "app.modules.clients.tmdb_client.get_details",
+        new_callable=AsyncMock,
+        return_value={
+            "title": "Mock",
+            "name": "Mock",
+            "overview": "",
+            "poster_path": None,
+            "release_date": None,
+            "first_air_date": None,
+            "vote_average": 1.0,
+            "number_of_seasons": 1,
+        },
+    ) as mock:
+        yield mock
 
 
 @pytest.fixture
@@ -217,3 +243,30 @@ def test_parse_seasons_bare_int_returns_none():
 
 def test_parse_seasons_list_returns_list():
     assert _parse_seasons('[1, 2]') == [1, 2]
+
+def test_enrich_404_yields_placeholder(client, mock_get_details):
+    """A genuine TMDB 404 degrades the row to the TMDB:{id} placeholder at 200."""
+    client.post("/api/watchlist", json={"tmdb_id": 777, "media_type": "movie"})
+    mock_get_details.side_effect = TMDBAPIError("missing", status_code=404)
+
+    response = client.get("/api/watchlist")
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["title"] == "TMDB:777"
+
+
+def test_get_watchlist_502_on_tmdb_outage(client, mock_get_details):
+    """A TMDB outage surfaces as 502, not a list of placeholder rows."""
+    client.post("/api/watchlist", json={"tmdb_id": 778, "media_type": "movie"})
+    mock_get_details.side_effect = TMDBNetworkError("boom")
+
+    response = client.get("/api/watchlist")
+    assert response.status_code == 502
+
+
+def test_add_to_watchlist_502_on_tmdb_outage(client, mock_get_details):
+    """POST enrichment under a TMDB outage returns 502, not a placeholder row."""
+    mock_get_details.side_effect = TMDBNetworkError("boom")
+
+    response = client.post("/api/watchlist", json={"tmdb_id": 779, "media_type": "movie"})
+    assert response.status_code == 502
