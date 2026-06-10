@@ -1,0 +1,11 @@
+# movie_discovery OMP config (project-scoped; OMP merges it with global ~/.omp/agent/config.yml).
+task:
+  agentModelOverrides:
+    # Recon scouts + reviewer (mirrors the global fleet; kept here so the project is self-complete).
+    reviewer: "openai-codex/gpt-5.5, google-gemini-cli/gemini-3-pro-preview"
+    explore: "anthropic/claude-haiku-4-5"
+    quick_task: "anthropic/claude-haiku-4-5"
+    # /audit's `auditor` agent on Fable 5 — free on Max through 2026-06-22, then credit-metered
+    # (falls back to Opus if Fable is unavailable). After the 22nd, change to
+    # "anthropic/claude-opus-4-8" to stop spending credits.
+    auditor: "claude-fable-5, anthropic/claude-opus-4-8"

@@ -1,0 +1,9 @@
+# Merge into your project's .omp/config.yml (or global ~/.omp/agent/config.yml).
+# Pins the generic worker agents. Adjust models to your fleet.
+task:
+  agentModelOverrides:
+    reviewer: "openai-codex/gpt-5.5, google-gemini-cli/gemini-3-pro-preview"
+    # implementer + test-writer inherit your default role (no pin needed).
+    # explore + quick_task (recon scouts): pin to avoid the 1M-haiku variant trap:
+    explore: "anthropic/claude-haiku-4-5"
+    quick_task: "anthropic/claude-haiku-4-5"
